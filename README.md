@@ -1,2 +1,2 @@
 # consistencias
-Capa de aplicación Backend Plus para manejo de consistencias en operativos de censos o estadísticas 
+Capa de aplicación backend-plus para manejo de consistencias en operativos censales

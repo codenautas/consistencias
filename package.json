@@ -1,0 +1,44 @@
+{
+  "name": "consistencias",
+  "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
+  "version": "0.0.4",
+  "author": "Codenautas <codenautas@googlegroups.com>",
+  "license": "MIT",
+  "main": "server/app-consistencias.js",
+  "types": "server/app-consistencias.d.ts",
+  "files": [
+    "client",
+    "install",
+    "server",
+    "unlogged"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenautas/consistencias.git"
+  },
+  "dependencies": {
+    "operativos": "~0.1.33"
+  },
+  "engines": {
+    "node": ">= 8.0.0"
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")",
+    "start": "node server/server-consistencias.js",
+    "dump": "npm run build && npm start -- --dump-db"
+  },
+  "qa-control": {
+    "package-version": "0.3.0",
+    "coverage": 90,
+    "run-in": "server",
+    "stability": "extending",
+    "type": "app",
+    "ecmaVersion": 6
+  },
+  "bugs": {
+    "url": "https://github.com/codenautas/consistencias/issues"
+  },
+  "homepage": "https://github.com/codenautas/consistencias#readme",
+  "devDependencies": {}
+}
