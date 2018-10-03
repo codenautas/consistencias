@@ -2,10 +2,8 @@
 
 import * as operativos from "operativos";
 import { procedures } from "./procedures-consistencias";
-import { expo_bases } from "./table-expo_bases";
-import { expo_tablas } from "./table-expo_tablas";
-import { expo_variables } from "./table-expo_variables";
-import { expo_variables_opciones } from "./table-expo_variables_opciones";
+import { con_var} from "./table-con_var";
+import { consistencias } from "./table-consistencias";
 
 export * from "operativos";
 
@@ -25,7 +23,7 @@ export function emergeAppConsistencias<T extends Constructor<operativos.AppOpera
             super.configStaticConfig();
             this.setStaticConfig(`
           server:
-            port: 3038
+            port: 3039
             base-url: /consistencias
             session-store: memory
           db:
@@ -90,11 +88,12 @@ export function emergeAppConsistencias<T extends Constructor<operativos.AppOpera
 
         getMenu():operativos.MenuDefinition{
             //TODO: es igual que en datos-ext llevarlo a operativos
-            let myMenuPart:operativos.MenuInfo[]=[
-                {menuType:'table', name:'expo_bases'},
-                {menuType:'table', name:'expo_tablas'},
-                {menuType:'table', name:'expo_variables'},
-                {menuType:'table', name:'expo_variables_opciones'},
+            let myMenuPart: operativos.MenuInfo[] = [
+                {
+                    menuType: 'menu', name: 'Consistencias', menuContent: [
+                        { menuType: 'table', name: 'consistencias' },
+                    ]
+                }
             ];
             let menu = {menu: super.getMenu().menu.concat(myMenuPart)}
             return menu;
@@ -105,10 +104,8 @@ export function emergeAppConsistencias<T extends Constructor<operativos.AppOpera
             super.prepareGetTables();
             this.getTableDefinition={
                 ...this.getTableDefinition,
-                expo_bases,
-                expo_tablas,
-                expo_variables,
-                expo_variables_opciones
+                consistencias,
+                con_var
             }            
         }
     }
