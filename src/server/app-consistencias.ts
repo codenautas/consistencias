@@ -4,6 +4,9 @@ import * as operativos from "operativos";
 import { procedures } from "./procedures-consistencias";
 import { con_var} from "./table-con_var";
 import { consistencias } from "./table-consistencias";
+import { Client } from "pg-promise-strict";
+import { ConsistenciasPk } from "./types-consistencias";
+import { ConsistenciaTable } from "../consistencias";
 
 export * from "operativos";
 
@@ -84,6 +87,13 @@ export function emergeAppConsistencias<T extends Constructor<operativos.AppOpera
             lang: es
             menu: true
             `);
+        }
+
+        compilar(client:Client, params: ConsistenciasPk){
+            ConsistenciaTable.get(params)
+            if (! con.valida){
+                throw new Error('La consistencia ' + con.con + ' debe haber compilado exitosamente');
+            }
         }
 
         getMenu():operativos.MenuDefinition{

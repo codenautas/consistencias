@@ -13,6 +13,10 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "precondicion"    , typeName: "text"    },
             { name: "postcondicion"   , typeName: "text"    },
             { name: "activa"          , typeName: "boolean" },
+            { name: "clausula_from"   , typeName: "text" },
+            { name: "expresion_sql"   , typeName: "text" },
+            { name: "error_compilacion"   , typeName: "text" },
+
             // { name: "explicacion"     , typeName: "text"    },
             // { name: "tipo"            , typeName: "text"    },
             // { name: "momento"         , typeName: "text"    },
