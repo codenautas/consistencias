@@ -16,12 +16,12 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "clausula_from"   , typeName: "text" },
             { name: "expresion_sql"   , typeName: "text" },
             { name: "error_compilacion"   , typeName: "text" },
-
-            // { name: "explicacion"     , typeName: "text"    },
-            // { name: "tipo"            , typeName: "text"    },
-            // { name: "momento"         , typeName: "text"    },
-            // { name: "modulo"          , typeName: "text"    },
             { name: "valida"          , typeName: "boolean" , editable:false},
+            { name: "explicacion"     , typeName: "text"    },
+            { name: "tipo"            , typeName: "text"    },
+            { name: "modulo"          , typeName: "text"    },
+            { name: "observaciones"         , typeName: "text"    },
+            { name: "variables_de_contexto"         , typeName: "text"    },
             
         ],
         primaryKey: ['operativo','con'],
