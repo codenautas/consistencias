@@ -1,12 +1,12 @@
 "use strict";
 
 import * as operativos from "operativos";
-import { procedures } from "./procedures-consistencias";
+// import { procedures } from "./procedures-consistencias";
 import { con_var} from "./table-con_var";
 import { consistencias } from "./table-consistencias";
-import { Client } from "pg-promise-strict";
-import { ConsistenciasPk } from "./types-consistencias";
-import { ConsistenciaTable } from "../consistencias";
+// import { Client } from "pg-promise-strict";
+// import { ConsistenciasPk } from "./types-consistencias";
+// import { ConsistenciaTable } from "../consistencias";
 
 export * from "operativos";
 
@@ -14,7 +14,7 @@ export type Constructor<T> = new(...args: any[]) => T;
 export function emergeAppConsistencias<T extends Constructor<operativos.AppOperativosType>>(Base:T){
     
     return class AppConsistencias extends Base{
-        myProcedures: operativos.ProcedureDef[] = procedures;
+        // myProcedures: operativos.ProcedureDef[] = procedures;
         myClientFileName: string = 'consistencias';
         
         constructor(...args:any[]){ 
@@ -89,11 +89,12 @@ export function emergeAppConsistencias<T extends Constructor<operativos.AppOpera
             `);
         }
 
-        compilar(client:Client, params: ConsistenciasPk){
-            ConsistenciaTable.get(params)
-            if (! con.valida){
-                throw new Error('La consistencia ' + con.con + ' debe haber compilado exitosamente');
-            }
+        // compilar(client:Client, params: ConsistenciasPk){
+        compilar(){
+            // ConsistenciaTable.get(params)
+            // if (! con.valida){
+            //     throw new Error('La consistencia ' + con.con + ' debe haber compilado exitosamente');
+            // }
         }
 
         getMenu():operativos.MenuDefinition{
