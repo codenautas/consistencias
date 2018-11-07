@@ -8,7 +8,7 @@
         "target": "es5",
         "skipLibCheck": true, //para que no haga chequeo de tipos en los declaration files dentro de node-modules(pg-promise-strict, express, node)
         "module": "umd",
-        "typeRoots" : ["node_modules/@types"],
+        "typeRoots" : ["node_modules/@types", "node_modules/types.d.ts/modules"],
         "noImplicitAny": true,
         "alwaysStrict": true,
         "noUnusedLocals": true,
