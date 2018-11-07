@@ -1,6 +1,6 @@
 "use strict";
 
-import {ProcedureContext} from "operativos";
+import { ProcedureContext } from "operativos";
 import { ConsistenciasGenerator } from "./types-consistencias";
 
 type ConsistenciasPk = {operativo: string, con: string}
@@ -16,6 +16,8 @@ var procedures = [
             let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
             await consistenciaGenerator.fetchDataFromDB(context.client);
             consistenciaGenerator.myCons.find(con=> con.con == params.con).compilar();
+
+            // Consistencia.fetchOne(params.operativo, params.con).compilar()
         }
     },
     {
