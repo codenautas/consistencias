@@ -14,7 +14,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "postcondicion"     , typeName: "text"    },
             { name: "activa"            , typeName: "boolean" },
             { name: "clausula_from"     , typeName: "text"  },
-            { name: "expresion_sql"     , typeName: "text" },
+            { name: "clausula_where"     , typeName: "text" },
             { name: "campos_pk"         , typeName: "text" },
             { name: "error_compilacion" , typeName: "text" },
             { name: "valida"            , typeName: "boolean" , editable:false},

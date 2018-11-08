@@ -1,7 +1,7 @@
 "use strict";
 
-import { ProcedureContext } from "operativos";
-import { ConsistenciasGenerator } from "./types-consistencias";
+import { ProcedureContext, OperativoGenerator } from "operativos";
+import { ConsistenciasGenerator, Consistencia } from "./types-consistencias";
 
 type ConsistenciasPk = {operativo: string, con: string}
 
@@ -13,11 +13,9 @@ var procedures = [
             {name:'con'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
-            let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
-            await consistenciaGenerator.fetchDataFromDB(context.client);
-            consistenciaGenerator.myCons.find(con=> con.con == params.con).compilar();
-
-            // Consistencia.fetchOne(params.operativo, params.con).compilar()
+            let operativoGenerator = new OperativoGenerator(params.operativo);
+            await operativoGenerator.fetchDataFromDB(context.client);
+            (await Consistencia.fetchOne(context.client, params.operativo, params.con)).compilar(context.client)
         }
     },
     {
@@ -27,9 +25,9 @@ var procedures = [
             {name:'con'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
-            let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
-            await consistenciaGenerator.fetchDataFromDB(context.client);
-            consistenciaGenerator.myCons.find(con=> con.con == params.con).correr();
+            let operativoGenerator = new OperativoGenerator(params.operativo);
+            await operativoGenerator.fetchDataFromDB(context.client);
+            (await Consistencia.fetchOne(context.client, params.operativo, params.con)).correr()
         }
     },
     {
@@ -40,7 +38,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
             let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
             await consistenciaGenerator.fetchDataFromDB(context.client);
-            consistenciaGenerator.myCons.forEach(con=> con.compilar());
+            consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
         }
     },
     {
