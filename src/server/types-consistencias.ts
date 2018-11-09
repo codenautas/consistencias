@@ -56,7 +56,8 @@ export class Consistencia extends ConsistenciaDB {
     async validateCondSql() {
         let insumosTDs:string[] = this.insumosVars.map(v=>v.tabla_datos);
         
-        insumosTDs = ['grupo_personas', 'personas', 'personas_calculadas']
+        // insumosTDs = ['grupo_personas', 'personas', 'personas_calculadas']
+        // let relaciones = Relaciones.fetchAll(this.client);
 
         this.clausula_from = 'FROM '+ insumosTDs.shift() + insumosTDs.map(tdName=> {
             ` JOIN ${tdName} ON `

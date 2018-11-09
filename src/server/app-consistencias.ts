@@ -39,7 +39,7 @@ export function emergeAppConsistencias<T extends operativos.Constructor<operativ
                 ...this.getTableDefinition,
                 consistencias,
                 con_var
-            }            
+            }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
                     {name: "compilar-con" , typeName: "bigint"  , editable:false, clientSide:'compilar', title: 'compilar con'},
