@@ -1,8 +1,8 @@
 "use strict";
 
 import {emergeAppConsistencias} from "./app-consistencias"
-import {emergeAppOperativos, AppBackend} from "operativos"
+import {emergeAppOperativos, emergeAppVarCal, AppBackend} from "varcal"
 
-var AppConsistencias = emergeAppConsistencias(emergeAppOperativos(AppBackend));
+var AppConsistencias = emergeAppConsistencias(emergeAppVarCal(emergeAppOperativos(AppBackend)));
 
 new AppConsistencias().start();

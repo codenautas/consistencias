@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "operativos": "~0.2.6",
-    "expre-parser": "~0.1.17"
+    "varcal": "~0.2.0"
   },
   "devDependencies": {
     "types.d.ts": "~0.1.32"
