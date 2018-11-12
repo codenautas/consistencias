@@ -4,6 +4,18 @@ import { Client } from 'pg-promise-strict';
 
 export * from 'varcal';
 
+export class ConVarDB{
+    operativo: string
+    con: string
+    variable: string
+    tabla_datos: string
+    texto: string
+}
+
+export class ConVar extends ConVarDB{
+
+}
+
 export abstract class ConsistenciaDB {
     operativo: string
     con: string
@@ -48,37 +60,52 @@ export class Consistencia extends ConsistenciaDB {
         return <Consistencia[]>result.rows.map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
     }
 
-    async validate(): Promise<void> {
+    async validateAndPreBuild(): Promise<void> {
         this.validateInsumosPreAndPostCond();
         await this.validateCondSql();
+        // pass all validations then complete this consistence to save afterwards
+        this.compilada = OperativoGenerator.getTodayForDB();
+        this.valida = true;
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
     async validateCondSql() {
-        let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
-        
-        // TODO: ORDENAR:
+        // TODO: ORDENAR dinamicamente:
         // primero: la td que no tenga ninguna TD en que busco es la principal
         // segundas: van todas las tds que tengan en "que_busco" a la principal
         // terceras: las tds que tengan en "que busco" a las segundas
-        insumosTDNames = ['grupo_personas', 'grupo_personas_calculada', 'personas', 'personas_calculadas']
-        let mainTD = this.opGen.getTD(insumosTDNames[0]);
-        let lastTD = this.opGen.getTD(insumosTDNames[insumosTDNames.length-1]);
-        this.clausula_from = 'FROM '+ mainTD.getTableName();
+        // provisoriamente se ordena fijando un arreglo ordenado
+        let orderedTDNames = ['grupo_personas', 'grupo_personas_calculada', 'personas', 'personas_calculadas'];
+        let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
+        let orderedInsumosTDNames:string[] = [];
+        orderedTDNames.forEach(orderedTDName => {
+            if(insumosTDNames.indexOf(orderedTDName) > -1){orderedInsumosTDNames.push(orderedTDName)}  
+        });
+        
+        let mainTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+        let lastTD = this.opGen.getTD(orderedInsumosTDNames[orderedInsumosTDNames.length-1]); //tabla mas específicas (padre)
 
-        for(let i=1; i < insumosTDNames.length; i++){
-            let leftInsumoTDName = insumosTDNames[i-1];
-            let rightInsumoTDName = insumosTDNames[i];
+        //calculo de campos_pk
+        // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
+        // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
+        this.campos_pk = lastTD.getPKCSV();
+
+        //calculo de clausula from
+        this.clausula_from = 'FROM '+ mainTD.getTableName();
+        for(let i=1; i < orderedInsumosTDNames.length; i++){
+            let leftInsumoTDName = orderedInsumosTDNames[i-1];
+            let rightInsumoTDName = orderedInsumosTDNames[i];
             this.clausula_from += this.opGen.joinTDs(leftInsumoTDName, rightInsumoTDName);
         }
         
+        //calculo de clausula where
         this.precondicion = getWrappedExpression(this.precondicion, lastTD.getPKCSV(), compilerOptions);
         this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getPKCSV(), compilerOptions);
-
         prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars)
         prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars)
-
         this.clausula_where = `WHERE (${this.precondicion}) AND (${this.postcondicion}) IS NOT TRUE`;
+        
+        // execute select final para ver si pasa
         let selectQuery = `SELECT true 
                             ${this.clausula_from}
                             ${this.clausula_where}
@@ -93,22 +120,22 @@ export class Consistencia extends ConsistenciaDB {
         this.validateVars(this.condInsumos.variables);
     }
 
-    throwError(specificError: string) {
-        throw new Error(`La consistencia "${this.con}" del operativo ${this.opGen.operativo} es inválida. ` + specificError);
+    msgErrorCompilación(){
+        return `La consistencia "${this.con}" del operativo ${this.opGen.operativo} es inválida. `;
     }
 
-    //TODO: ADD PREFIJOS!!
+    //TODO: ADD PREFIJOS!! (alias)
     validateVars(varNames: string[]): void {
         let operativoGenerator = this.opGen;
         varNames.forEach(varName => {
             let varsFound = operativoGenerator.myVars.filter(v => v.variable == varName);
             if (varsFound.length > 1) {
-                this.throwError('La variable ' + varName + ' se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
+                throw new Error('La variable ' + varName + ' se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
             } else if (varsFound.length <= 0) {
-                this.throwError('La variable ' + varName + ' no se encontró en la lista de variables');
+                throw new Error('La variable ' + varName + ' no se encontró en la lista de variables');
             } else {
                 let varFound = varsFound[0];
-                if (!varFound.activa){this.throwError('La variable ' + varName + ' no está activa.');}
+                if (!varFound.activa){throw new Error('La variable ' + varName + ' no está activa.');}
                 this.insumosVars.push(varFound);
             }
         });
@@ -128,20 +155,6 @@ export class Consistencia extends ConsistenciaDB {
             }
         })
     }
-        
-    cleanConVar(): any {
-        this.insumosVars=[];
-        //TODO:  clean convars in DB
-        // await
-    }
-
-    // Agrega registros que correspondan en con_var para esta consistencia generar sql para FROM WHERE y el pedazo de clave
-    updateConsistencia() {
-        this.valida = true; //pass validation then is valid
-        this.campos_pk = 'asdfs'
-        // this.clausula_where = [];
-        // llena campos clausula_from y clausula_where de consistencia
-    }
     
     // responsabilidades: chequear que sea valida y generar el sql 
     async compilar(client: Client) {
@@ -149,36 +162,48 @@ export class Consistencia extends ConsistenciaDB {
         this.opGen = OperativoGenerator.instanceObj;
         //TODO: cuando se compile en masa sacar este fetchall a una clase Compilador que lo haga una sola vez
         try {
-            await this.validate();
-            await this.updateDB();
+            this.cleanAll();
+            await this.validateAndPreBuild();
         } catch (error) {
-            this.cleanDB();
-            this.error_compilacion = (<Error>error).message;
-            // TODO agregar error genérico de consistencia que falló aún cuando falle por postgres (en la ejecución del select)
-            throw error;
-        }finally{
-            await this.save();
+            this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
+            this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
+            throw new Error(this.error_compilacion);
+        } finally {
+            await this.updateDB();
         }
     }
-    save(): any {
-        throw new Error("Method not implemented.");
+    async save(): Promise<void> {
+            
     }
-    cleanDB(): any {
-        this.cleanConsistencia();
-        this.cleanConVar();
-    }
-    private cleanConsistencia() {
+    
+    private cleanAll() {
+        // clean consistencia
         this.valida = false;
+        this.compilada = null;
         this.clausula_from = this.clausula_where = this.campos_pk = '';
+
+        // clean con vars to insert
+        this.insumosVars=[]; 
     }
 
     async updateDB(): Promise<any> {
-        this.updateConsistencia();
-        this.insertConVars();
-    }
-    async insertConVars(): Promise<any> {
-        // Agrega registros que correspondan en con_var para esta consistencia
-        //insert en tabla convar -> this.insumosVars
+        //update con_var query
+        let conVarDelete = `DELETE FROM con_var WHERE opertivo=$1 AND con=$2;`;
+        let conVarInserts = this.insumosVars.length < 1? '': `INSERT INTO con_var (operativo, con, variable, tabla_datos) VALUES 
+            ${this.insumosVars.map(ivar=>`($1, $2,'${ivar.variable}','${ivar.tabla_datos}'),\n`)}`;
+
+        //update consistencias query
+        let fieldsToUpdate = ['compilada', 'valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
+        let be:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
+        // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y con=$2
+        let conUpdate = `UPDATE consistencias SET 
+            ${fieldsToUpdate.map((fieldName, index)=> `${fieldName}=$${index+3}`).join(', ')}
+            WHERE operativo=$1 AND con=$2;`;
+        let params=[this.operativo, this.con].concat(fieldsToUpdate.map(f=> be[f] ));
+
+        //execute all query
+        let queryParts = ['do $CONSIST_UPDATE$\n begin', conVarDelete, conVarInserts, conUpdate, 'end\n$CONSIST_UPDATE$']
+        await this.client.query(queryParts.join('\n----\n'), params).execute();
     }
 
     correr() {
