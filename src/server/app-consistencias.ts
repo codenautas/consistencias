@@ -1,10 +1,12 @@
 "use strict";
 
 import * as operativos from "operativos";
-import { AppBackend, AppVarCalType, emergeAppVarCal, emergeAppOperativos } from "varcal";
+import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal } from "varcal";
 import { procedures } from "./procedures-consistencias";
 import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
+import { inconsistencias } from "./table-inconsistencias";
+import { inconsistencias_ultimas } from "./table-inconsistencias_ultimas";
 
 export * from "./types-consistencias";
 
@@ -41,7 +43,10 @@ export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCa
             this.getTableDefinition={
                 ...this.getTableDefinition,
                 consistencias,
-                con_var
+                con_var,
+                inconsistencias,
+                inconsistencias_ultimas,
+                // in_con_var
             }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(

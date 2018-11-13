@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
-import { OperativoGenerator, Variable, prefijarExpresion, getWrappedExpression, compilerOptions, AppOperativos } from 'varcal';
 import { Client } from 'pg-promise-strict';
+import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable } from 'varcal';
 
 export * from 'varcal';
 
@@ -13,7 +13,10 @@ export class ConVarDB{
 }
 
 export class ConVar extends ConVarDB{
-
+    static async fetchAll(client: Client, op: string, consistencia:string): Promise<ConVar[]> {
+        let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, consistencia]).fetchAll();
+        return <ConVar[]>result.rows.map((con: ConVar) => Object.setPrototypeOf(con, ConVar.prototype));
+    }
 }
 
 export abstract class ConsistenciaDB {
@@ -49,7 +52,6 @@ export class Consistencia extends ConsistenciaDB {
         return Object.assign(new Consistencia(), result.row);
     }
 
-    // TODO: filtrar por operativo
     static async fetchAll(client: Client, op: string): Promise<Consistencia[]> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1`, [op]).fetchAll();
         return <Consistencia[]>result.rows.map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
@@ -60,7 +62,7 @@ export class Consistencia extends ConsistenciaDB {
         this.validateCondInsumos();
         await this.validateCondSql();
         // pass all validations then complete this consistence to save afterwards
-        this.compilada = AppOperativos.getTodayForDB();
+         this.compilada = new Date();
         this.valida = true;
     }
 
@@ -175,6 +177,7 @@ export class Consistencia extends ConsistenciaDB {
             this.cleanAll();
             await this.validateAndPreBuild();
         } catch (error) {
+            // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
             this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
             throw new Error(this.error_compilacion);
@@ -214,18 +217,19 @@ export class Consistencia extends ConsistenciaDB {
         }
 
         // update consistencias query
-        let fieldsToUpdate = ['compilada', 'valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
-        let be:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
+        let fieldsToUpdate = ['valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
+        let esto:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y con=$2
         let conUpdateQuery = `UPDATE consistencias SET 
+            compilada=${this.compilada? 'current_timestamp': 'null'},
             ${fieldsToUpdate.map((fieldName, index)=> `${fieldName}=$${index+3}`).join(', ')}
             WHERE operativo=$1 AND con=$2`;
-        let params=basicParams.concat(fieldsToUpdate.map(f=> be[f] ));
+        let params=basicParams.concat(fieldsToUpdate.map(f=> esto[f] ));
         await this.client.query(conUpdateQuery, params).execute();
     }
 
     correr() {
-        if (!this.valida) {
+        if (!this.valida) { 
             throw new Error('La consistencia ' + this.con + ' debe haber compilado exitosamente');
         }
     }

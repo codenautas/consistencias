@@ -13,11 +13,15 @@ var procedures = [
             {name:'con'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
-            let operativoGenerator = new OperativoGenerator(params.operativo);
-            await operativoGenerator.fetchDataFromDB(context.client);
-            let con = await Consistencia.fetchOne(context.client, params.operativo, params.con);
-            await con.compilar(context.client)
-            return 'listo';
+            try{
+                let operativoGenerator = new OperativoGenerator(params.operativo);
+                await operativoGenerator.fetchDataFromDB(context.client);
+                let con = await Consistencia.fetchOne(context.client, params.operativo, params.con);
+                await con.compilar(context.client)
+                return 'listo';
+            }catch(e){
+                return 'error compilación'
+            }
         }
     },
     {
@@ -39,10 +43,14 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
-            let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
-            await consistenciaGenerator.fetchDataFromDB(context.client);
-            /*await por cada consistencia ???*/ consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
-            return 'listo';
+            try{
+                let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
+                await consistenciaGenerator.fetchDataFromDB(context.client);
+                /*await por cada consistencia ???*/ consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
+                return 'listo';
+            }catch(e){
+                return 'error compilación'
+            }
         }
     },
     {

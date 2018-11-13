@@ -9,7 +9,7 @@ export function consistencias(context:TableContext):TableDefinition{
         editable: admin,
         fields: [
             { name: "operativo"         , typeName:'text'     },
-            { name: "con"               , typeName: "text"    },
+            { name: "con"               , typeName: "text"    }, //TODO: cambiar de con a consistencia
             { name: "precondicion"      , typeName: "text"    },
             { name: "postcondicion"     , typeName: "text", nullable:false},
             { name: "activa"            , typeName: "boolean", nullable:false },
@@ -25,7 +25,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "modulo"            , typeName: "text"    },
             { name: "observaciones"         , typeName: "text"    },
             { name: "variables_de_contexto" , typeName: "text"    },
-            { name: 'compilada'             , typeName:'date'   , editable:false },
+            { name: 'compilada'             , typeName:'timestamp'   , editable:false },
             { name: "compilar"              , typeName:'bigint' , editable:false, clientSide:'compilar'},
             { name: "correr"                , typeName:'bigint' , editable:false, clientSide:'correr'}
         ],

@@ -1,7 +1,7 @@
 "use strict";
 import {TableDefinition} from "operativos"
 
-function con_var():TableDefinition{
+export function con_var():TableDefinition{
     return {
         name: 'con_var',
         elementName: 'con_var',
@@ -20,5 +20,3 @@ function con_var():TableDefinition{
         ],
     }
 }
-
-export {con_var};

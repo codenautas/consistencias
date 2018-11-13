@@ -1,11 +1,11 @@
 "use strict";
 import {TableContext,TableDefinition} from "operativos"
 
-export function inconsistencias(context:TableContext):TableDefinition{
+export function inconsistencias_ultimas(context:TableContext):TableDefinition{
     var admin = context.user.rol === 'admin';
     return {
-        name: 'inconsistencias',
-        elementName: 'inconsistencia',
+        name: 'inconsistencias_ultimas',
+        elementName: 'inconsistencias_ultima',
         editable: admin,
         fields: [
             { name: "operativo"            , typeName:'text'     },
