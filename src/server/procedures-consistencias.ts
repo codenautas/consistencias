@@ -15,7 +15,9 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             let operativoGenerator = new OperativoGenerator(params.operativo);
             await operativoGenerator.fetchDataFromDB(context.client);
-            (await Consistencia.fetchOne(context.client, params.operativo, params.con)).compilar(context.client)
+            let con = await Consistencia.fetchOne(context.client, params.operativo, params.con);
+            await con.compilar(context.client)
+            return 'listo';
         }
     },
     {
@@ -27,7 +29,8 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             let operativoGenerator = new OperativoGenerator(params.operativo);
             await operativoGenerator.fetchDataFromDB(context.client);
-            (await Consistencia.fetchOne(context.client, params.operativo, params.con)).correr()
+            await (await Consistencia.fetchOne(context.client, params.operativo, params.con)).correr()
+            return 'listo';
         }
     },
     {
@@ -38,7 +41,8 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
             let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
             await consistenciaGenerator.fetchDataFromDB(context.client);
-            consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
+            /*await por cada consistencia ???*/ consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
+            return 'listo';
         }
     },
     {
@@ -50,6 +54,7 @@ var procedures = [
             let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
             await consistenciaGenerator.fetchDataFromDB(context.client);
             consistenciaGenerator.myCons.forEach(con=> con.correr());
+            return 'listo';
         }
     }
 ];

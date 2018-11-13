@@ -5,7 +5,7 @@ function con_var():TableDefinition{
     return {
         name: 'con_var',
         elementName: 'con_var',
-        editable: false,
+        editable: true,
         fields: [
             {name:"operativo"        , typeName:'text'         },
             {name:"con"              , typeName:'text'         },

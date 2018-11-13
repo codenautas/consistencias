@@ -1,5 +1,5 @@
 import * as EP from "expre-parser";
-import { OperativoGenerator, Variable, prefijarExpresion, getWrappedExpression, compilerOptions } from 'varcal';
+import { OperativoGenerator, Variable, prefijarExpresion, getWrappedExpression, compilerOptions, AppOperativos } from 'varcal';
 import { Client } from 'pg-promise-strict';
 
 export * from 'varcal';
@@ -19,22 +19,22 @@ export class ConVar extends ConVarDB{
 export abstract class ConsistenciaDB {
     operativo: string
     con: string
-    precondicion: string
+    precondicion?: string
     postcondicion: string
     activa: boolean
-    clausula_from: string
-    clausula_where: string
-    campos_pk: string
-    error_compilacion: string
-    valida: boolean
-    explicacion: string
-    falsos_positivos: boolean
-    momento: string
-    tipo: string
-    modulo: string
-    observaciones: string
-    variables_de_contexto: string
-    compilada: Date
+    clausula_from?: string
+    clausula_where?: string
+    campos_pk?: string
+    error_compilacion?: string
+    valida?: boolean
+    explicacion?: string
+    falsos_positivos?: boolean
+    momento?: string
+    tipo?: string
+    modulo?: string
+    observaciones?: string
+    variables_de_contexto?: string
+    compilada?: Date
 }
 
 export class Consistencia extends ConsistenciaDB {
@@ -49,23 +49,29 @@ export class Consistencia extends ConsistenciaDB {
         return Object.assign(new Consistencia(), result.row);
     }
 
-    static async fetchAll(client: Client): Promise<Consistencia[]> {
-        let result = await client.query(`
-            SELECT td.*, r.que_busco, to_jsonb(array_agg(v.variable order by v.orden)) pks
-                FROM tabla_datos td 
-                    LEFT JOIN relaciones r ON td.operativo=r.operativo AND td.tabla_datos=r.tabla_datos AND r.tipo <> 'opcional' 
-                    LEFT JOIN variables v ON td.operativo=v.operativo AND td.tabla_datos=v.tabla_datos AND v.es_pk > 0
-                GROUP BY td.operativo, td.tabla_datos, r.que_busco`
-            , []).fetchAll();
+    // TODO: filtrar por operativo
+    static async fetchAll(client: Client, op: string): Promise<Consistencia[]> {
+        let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1`, [op]).fetchAll();
         return <Consistencia[]>result.rows.map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
     }
 
     async validateAndPreBuild(): Promise<void> {
-        this.validateInsumosPreAndPostCond();
+        this.validatePreAndPostCond();
+        this.validateCondInsumos();
         await this.validateCondSql();
         // pass all validations then complete this consistence to save afterwards
-        this.compilada = OperativoGenerator.getTodayForDB();
+        this.compilada = AppOperativos.getTodayForDB();
         this.valida = true;
+    }
+
+    validatePreAndPostCond(): any {
+        // valida o "sanitiza" la pre cond
+        if (this.precondicion){
+            EP.parse(this.precondicion)
+        }else{
+            this.precondicion = 'true'
+        }
+        EP.parse(this.postcondicion)
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
@@ -103,7 +109,7 @@ export class Consistencia extends ConsistenciaDB {
         this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getPKCSV(), compilerOptions);
         prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars)
         prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars)
-        this.clausula_where = `WHERE (${this.precondicion}) AND (${this.postcondicion}) IS NOT TRUE`;
+        this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
         
         // execute select final para ver si pasa
         let selectQuery = `SELECT true 
@@ -113,15 +119,19 @@ export class Consistencia extends ConsistenciaDB {
         await this.client.query(selectQuery, []).fetchOneRowIfExists;
     }
 
+    getMixConditions(){
+        return '(' + this.precondicion + ') AND (' + this.postcondicion + ')';
+    }
+
     // chequear que todas las variables de la cond existan en alguna tabla (sino se llena el campo error_compilacion)
-    validateInsumosPreAndPostCond(): void {    
-        this.condInsumos = EP.parse(this.precondicion + ' ' + this.postcondicion).getInsumos();
+    validateCondInsumos(): void {
+        this.condInsumos = EP.parse(this.getMixConditions()).getInsumos();
         this.validateFunctions(this.condInsumos.funciones);
         this.validateVars(this.condInsumos.variables);
     }
 
     msgErrorCompilación(){
-        return `La consistencia "${this.con}" del operativo ${this.opGen.operativo} es inválida. `;
+        return `La consistencia "${this.con}" del operativo "${this.opGen.operativo}" es inválida. `;
     }
 
     //TODO: ADD PREFIJOS!! (alias)
@@ -130,12 +140,12 @@ export class Consistencia extends ConsistenciaDB {
         varNames.forEach(varName => {
             let varsFound = operativoGenerator.myVars.filter(v => v.variable == varName);
             if (varsFound.length > 1) {
-                throw new Error('La variable ' + varName + ' se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
+                throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
             } else if (varsFound.length <= 0) {
-                throw new Error('La variable ' + varName + ' no se encontró en la lista de variables');
+                throw new Error('La variable "' + varName + '" no se encontró en la lista de variables');
             } else {
                 let varFound = varsFound[0];
-                if (!varFound.activa){throw new Error('La variable ' + varName + ' no está activa.');}
+                if (!varFound.activa){throw new Error('La variable "' + varName + '" no está activa.');}
                 this.insumosVars.push(varFound);
             }
         });
@@ -172,38 +182,46 @@ export class Consistencia extends ConsistenciaDB {
             await this.updateDB();
         }
     }
-    async save(): Promise<void> {
-            
-    }
-    
+        
     private cleanAll() {
         // clean consistencia
         this.valida = false;
         this.compilada = null;
-        this.clausula_from = this.clausula_where = this.campos_pk = '';
+        this.clausula_from = this.clausula_where = this.campos_pk = this.error_compilacion = null;
 
         // clean con vars to insert
         this.insumosVars=[]; 
     }
 
+    // TODO hacer distintos executes() ya que el procedure de BEPlus asegura que dentro del mismo coreFunction
+    // todos los context.client.query.execute() van dentro de la misma transacción (transacción que se abre al iniciar el core function
+    // y queda abierta hasta que termina) que rollbaquea todos los execute si algo va mal, además se espera que conectarse varias veces
+    // a la DB (hacer distintos executes()) no sea un problema futuro de performance (ya sea porque node y postgres estarán en el 
+    // mismo server o bien conectados por fibra). Además como la transacción queda abierta luego del primer execute(), en los consecutivos execute()
+    // "se ahorra" bastante overhead de levantar una nueva transacción. Esto es: un motivo mas para no hacer una query choclaso.
+    // Entonces haciendo execute diferentes se podrá organizar el código mas modularmente, usar query params y no necesitar poner
+    // do begin end.
     async updateDB(): Promise<any> {
-        //update con_var query
-        let conVarDelete = `DELETE FROM con_var WHERE opertivo=$1 AND con=$2;`;
-        let conVarInserts = this.insumosVars.length < 1? '': `INSERT INTO con_var (operativo, con, variable, tabla_datos) VALUES 
-            ${this.insumosVars.map(ivar=>`($1, $2,'${ivar.variable}','${ivar.tabla_datos}'),\n`)}`;
+        let basicParams = [this.operativo, this.con];
+        //delete con_var
+        await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND con=$2', basicParams).execute();
 
-        //update consistencias query
+        // insert con_vars
+        if(this.insumosVars.length > 0){
+            let conVarInsertsQuery =  `INSERT INTO con_var (operativo, con, variable, tabla_datos, texto) VALUES 
+            ${this.insumosVars.map(ivar=>`($1, $2,'${ivar.variable}','${ivar.tabla_datos}','${ivar.nombre}')`).join(', ')}`;
+            await this.client.query(conVarInsertsQuery, basicParams).execute();
+        }
+
+        // update consistencias query
         let fieldsToUpdate = ['compilada', 'valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
         let be:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y con=$2
-        let conUpdate = `UPDATE consistencias SET 
+        let conUpdateQuery = `UPDATE consistencias SET 
             ${fieldsToUpdate.map((fieldName, index)=> `${fieldName}=$${index+3}`).join(', ')}
-            WHERE operativo=$1 AND con=$2;`;
-        let params=[this.operativo, this.con].concat(fieldsToUpdate.map(f=> be[f] ));
-
-        //execute all query
-        let queryParts = ['do $CONSIST_UPDATE$\n begin', conVarDelete, conVarInserts, conUpdate, 'end\n$CONSIST_UPDATE$']
-        await this.client.query(queryParts.join('\n----\n'), params).execute();
+            WHERE operativo=$1 AND con=$2`;
+        let params=basicParams.concat(fieldsToUpdate.map(f=> be[f] ));
+        await this.client.query(conUpdateQuery, params).execute();
     }
 
     correr() {
@@ -222,7 +240,7 @@ export class ConsistenciasGenerator extends OperativoGenerator {
 
     async fetchDataFromDB(client: Client) {
         await super.fetchDataFromDB(client);
-        this.myCons = await Consistencia.fetchAll(client);
+        this.myCons = await Consistencia.fetchAll(client,this.operativo);
     }
 
 }
