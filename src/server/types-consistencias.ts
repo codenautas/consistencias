@@ -14,7 +14,7 @@ export class ConVarDB{
 
 export class ConVar extends ConVarDB{
     static async fetchAll(client: Client, op: string, consistencia:string): Promise<ConVar[]> {
-        let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, consistencia]).fetchAll();
+        let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1 AND c.con = $2`, [op, consistencia]).fetchAll();
         return <ConVar[]>result.rows.map((con: ConVar) => Object.setPrototypeOf(con, ConVar.prototype));
     }
 }
