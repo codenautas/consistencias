@@ -20,7 +20,7 @@ var procedures = [
                 await con.compilar(context.client)
                 return 'listo';
             }catch(e){
-                return 'error compilación'
+                return 'error compilación';
             }
         }
     },

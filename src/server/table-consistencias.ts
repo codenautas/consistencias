@@ -8,6 +8,7 @@ export function consistencias(context:TableContext):TableDefinition{
         elementName: 'consistencia',
         editable: admin,
         fields: [
+            { name: "compilar"              , typeName:'bigint' , editable:false, clientSide:'compilar'},
             { name: "operativo"         , typeName:'text'     },
             { name: "con"               , typeName: "text"    }, //TODO: cambiar de con a consistencia
             { name: "precondicion"      , typeName: "text"    },
@@ -26,8 +27,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "observaciones"         , typeName: "text"    },
             { name: "variables_de_contexto" , typeName: "text"    },
             { name: 'compilada'             , typeName:'timestamp'   , editable:false },
-            { name: "compilar"              , typeName:'bigint' , editable:false, clientSide:'compilar'},
-            { name: "correr"                , typeName:'bigint' , editable:false, clientSide:'correr'}
+            // { name: "correr"                , typeName:'bigint' , editable:false, clientSide:'correr'}
         ],
         primaryKey: ['operativo','con'],
         foreignKeys:[

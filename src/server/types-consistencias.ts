@@ -62,7 +62,7 @@ export class Consistencia extends ConsistenciaDB {
         this.validateCondInsumos();
         await this.validateCondSql();
         // pass all validations then complete this consistence to save afterwards
-         this.compilada = new Date();
+        this.compilada = new Date();
         this.valida = true;
     }
 
@@ -114,11 +114,19 @@ export class Consistencia extends ConsistenciaDB {
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
         
         // execute select final para ver si pasa
-        let selectQuery = `SELECT true 
-                            ${this.clausula_from}
-                            ${this.clausula_where}
-                            limit 1`;
-        await this.client.query(selectQuery, []).fetchOneRowIfExists;
+        let selectQuery = `
+            do $TEST_CON$ begin
+                PERFORM true 
+                    ${this.clausula_from}
+                    ${this.clausula_where}
+                    limit 1;
+                EXCEPTION WHEN OTHERS THEN
+                    -- raise notice '%', SQLERRM; -- no sirve porque hace pasar el error
+                    -- UPDATE consistencias SET error_compilacion=SQLERRM; -- probar esto
+                    RAISE EXCEPTION 'Error al ejecutar la consulta: %', SQLERRM;  -- no sirve porque rollbackea todo
+                    --PERFORM FALSE -- no sirve porque el perform no devuelve nada 
+            end $TEST_CON$`;
+        await this.client.query(selectQuery).execute();
     }
 
     getMixConditions(){
@@ -159,6 +167,7 @@ export class Consistencia extends ConsistenciaDB {
 
     validateFunctions(funcNames: string[]) {
         let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
+        //TODO sacar el esquema comun, inferirlo
         let userWhiteList = ['informado', 'dic_tradu'];
         let whiteList = pgWitheList.concat(userWhiteList);
         funcNames.forEach(f => {
