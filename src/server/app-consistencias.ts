@@ -7,6 +7,7 @@ import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
 import { inconsistencias } from "./table-inconsistencias";
 import { inconsistencias_ultimas } from "./table-inconsistencias_ultimas";
+import { in_con_var } from "./table-in_con_var";
 
 export * from "./types-consistencias";
 
@@ -46,7 +47,7 @@ export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCa
                 con_var,
                 inconsistencias,
                 inconsistencias_ultimas,
-                // in_con_var
+                in_con_var
             }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
