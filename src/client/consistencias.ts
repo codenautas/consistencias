@@ -59,12 +59,21 @@ myOwn.clientSides.compilar = botonClientSideEnGrilla({
     }
 });
 
-myOwn.clientSides.correr = botonClientSideEnGrilla({
-    nombreBoton: 'correr',
+myOwn.clientSides.compilarTodas = botonClientSideEnGrilla({
+    nombreBoton: 'compilar todas',
     llamada: function (depot: myOwn.Depot) {
-        return myOwn.ajax.consistencia.correr({
-            operativo: depot.row.operativo,
-            con: depot.row.con
+        return myOwn.ajax.consistencias.compilar({
+            operativo: depot.row.operativo
         });
     }
 });
+
+// myOwn.clientSides.correr = botonClientSideEnGrilla({
+//     nombreBoton: 'correr',
+//     llamada: function (depot: myOwn.Depot) {
+//         return myOwn.ajax.consistencia.correr({
+//             operativo: depot.row.operativo,
+//             con: depot.row.con
+//         });
+//     }
+// });

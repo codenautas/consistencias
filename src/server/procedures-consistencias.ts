@@ -44,9 +44,14 @@ var procedures = [
         ],
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
             try{
-                let consistenciaGenerator = new ConsistenciasGenerator(params.operativo);
-                await consistenciaGenerator.fetchDataFromDB(context.client);
-                /*await por cada consistencia ???*/ consistenciaGenerator.myCons.forEach(con=> con.compilar(context.client));
+                let operativoGenerator = new OperativoGenerator(params.operativo);
+                await operativoGenerator.fetchDataFromDB(context.client);
+                let cons = await Consistencia.fetchAll(context.client, params.operativo);
+
+                await Promise.all(cons.map(async function(con){
+                    await con.compilar(context.client);
+                }));
+
                 return 'listo';
             }catch(e){
                 return 'error compilación'
