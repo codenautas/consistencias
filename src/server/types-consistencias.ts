@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { Client } from 'pg-promise-strict';
-import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable } from 'varcal';
+import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, AppOperativos } from 'varcal';
 
 export * from 'varcal';
 
@@ -27,7 +27,7 @@ export abstract class ConsistenciaDB {
     activa: boolean
     clausula_from?: string
     clausula_where?: string
-    campos_pk?: string
+    campos_pk?: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
     error_compilacion?: string
     valida?: boolean
     explicacion?: string
@@ -83,23 +83,23 @@ export class Consistencia extends ConsistenciaDB {
         // segundas: van todas las tds que tengan en "que_busco" a la principal
         // terceras: las tds que tengan en "que busco" a las segundas
         // provisoriamente se ordena fijando un arreglo ordenado
-        let orderedTDNames = ['grupo_personas', 'grupo_personas_calculada', 'personas', 'personas_calculadas'];
+        // TODO: deshardcodear main TD
+        let mainTD = 'grupo_personas';
+        let orderedTDNames = [mainTD, 'grupo_personas_calculada', 'personas', 'personas_calculadas'];
         let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
-        let orderedInsumosTDNames:string[] = [];
-        orderedTDNames.forEach(orderedTDName => {
-            if(insumosTDNames.indexOf(orderedTDName) > -1){orderedInsumosTDNames.push(orderedTDName)}  
-        });
+        if (insumosTDNames.indexOf(mainTD) == -1){ insumosTDNames.push(mainTD) }
+        let orderedInsumosTDNames:string[] = orderedTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
         
-        let mainTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+        let firstTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
         let lastTD = this.opGen.getTD(orderedInsumosTDNames[orderedInsumosTDNames.length-1]); //tabla mas específicas (padre)
 
         //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
-        this.campos_pk = lastTD.getPKCSV();
+        this.campos_pk = lastTD.getPKsWitAlias().join(',');
 
         //calculo de clausula from
-        this.clausula_from = 'FROM '+ mainTD.getTableName();
+        this.clausula_from = 'FROM '+ firstTD.getTableName();
         for(let i=1; i < orderedInsumosTDNames.length; i++){
             let leftInsumoTDName = orderedInsumosTDNames[i-1];
             let rightInsumoTDName = orderedInsumosTDNames[i];
@@ -114,19 +114,34 @@ export class Consistencia extends ConsistenciaDB {
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
         
         // execute select final para ver si pasa
+        // TODO: agregar try catch de sql
         let selectQuery = `
-            do $TEST_CON$ begin
-                PERFORM true 
-                    ${this.clausula_from}
-                    ${this.clausula_where}
-                    limit 1;
-                EXCEPTION WHEN OTHERS THEN
-                    -- raise notice '%', SQLERRM; -- no sirve porque hace pasar el error
-                    -- UPDATE consistencias SET error_compilacion=SQLERRM; -- probar esto
-                    RAISE EXCEPTION 'Error al ejecutar la consulta: %', SQLERRM;  -- no sirve porque rollbackea todo
-                    --PERFORM FALSE -- no sirve porque el perform no devuelve nada 
-            end $TEST_CON$`;
-        await this.client.query(selectQuery).execute();
+            SELECT ${await this.getCompleteClausule()}
+                  AND ${mainTD}.operativo=$1
+                  AND ${mainTD}.id_caso='-1'`;
+        await this.client.query(selectQuery,[this.operativo]).execute();
+    }
+
+    async getCompleteClausule(): Promise<string> {
+        return `${await this.getSelectFields()}
+            ${this.clausula_from}
+            ${this.clausula_where}`;
+    }
+
+    async getSelectFields():Promise<string>{
+        return `
+            '${this.operativo}',
+            '${this.con}',
+            jsonb_build_object(${this.getPkIntegrada()}) as pk_integrada,
+            jsonb_build_object(${await this.getInConVars()}) as incon_vars`;
+    }
+    async getInConVars(): Promise<string> {
+        var conVars = await ConVar.fetchAll(this.client, this.operativo, this.con);
+        return conVars.map(v=>`'${v.tabla_datos}.${v.variable}',${v.tabla_datos.endsWith('calculada')? AppOperativos.prefixTableName(v.tabla_datos,this.operativo): v.tabla_datos}.${v.variable}`).join(',')
+    }
+
+    getPkIntegrada():string{
+        return this.campos_pk.split(',').map(campoConAlias=> `'${campoConAlias.split('.')[1]}', ${campoConAlias}`).join(',');
     }
 
     getMixConditions(){

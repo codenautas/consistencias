@@ -1,11 +1,12 @@
 "use strict";
-import {TableDefinition} from "operativos"
+import {TableDefinition, TableContext} from "operativos"
 
-export function in_con_var():TableDefinition{
+export function in_con_var(context:TableContext):TableDefinition{
+    var admin = context.user.rol === 'admin';
     return {
         name: 'in_con_var',
         elementName: 'in_con_var',
-        editable: false,
+        editable: admin,
         fields: [
             {name:"operativo"        , typeName:'text'         },
             {name:"con"              , typeName:'text'         },

@@ -19,7 +19,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "campos_pk"         , typeName: "text" , editable:false},
             { name: "error_compilacion" , typeName: "text" , editable:false},
             { name: "valida"            , typeName: "boolean" , editable:false},
-            { name: "explicacion"       , typeName: "text"    },
+            { name: "explicacion"       , typeName: "text"    , isName:true},
             { name: "falsos_positivos"  , typeName: "boolean"    },
             { name: "momento"           , typeName: "text"    },
             { name: "tipo"              , typeName: "text"    },
