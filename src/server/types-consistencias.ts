@@ -4,6 +4,9 @@ import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpr
 
 export * from 'varcal';
 
+export var mainTD;
+export var orderedTDNames;
+
 export class ConVarDB{
     operativo: string
     con: string
@@ -84,8 +87,6 @@ export class Consistencia extends ConsistenciaDB {
         // terceras: las tds que tengan en "que busco" a las segundas
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
-        let mainTD = 'grupo_personas';
-        let orderedTDNames = [mainTD, 'grupo_personas_calculada', 'personas', 'personas_calculadas'];
         let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
         if (insumosTDNames.indexOf(mainTD) == -1){ insumosTDNames.push(mainTD) }
         let orderedInsumosTDNames:string[] = orderedTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
