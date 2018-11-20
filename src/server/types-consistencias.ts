@@ -4,8 +4,8 @@ import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpr
 
 export * from 'varcal';
 
-export var mainTD;
-export var orderedTDNames;
+export var mainTD:string;
+export var orderedTDNames:string[];
 
 export class ConVarDB{
     operativo: string
