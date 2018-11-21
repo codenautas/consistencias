@@ -1,11 +1,8 @@
 import * as EP from "expre-parser";
 import { Client } from 'pg-promise-strict';
-import { compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, AppOperativos } from 'varcal';
+import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable } from 'varcal';
 
 export * from 'varcal';
-
-export var mainTD:string;
-export var orderedTDNames:string[];
 
 export class ConVarDB{
     operativo: string
@@ -16,8 +13,8 @@ export class ConVarDB{
 }
 
 export class ConVar extends ConVarDB{
-    static async fetchAll(client: Client, op: string, consistencia:string): Promise<ConVar[]> {
-        let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1 AND c.con = $2`, [op, consistencia]).fetchAll();
+    static async fetchAll(client: Client, op: string): Promise<ConVar[]> {
+        let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1`, [op]).fetchAll();
         return <ConVar[]>result.rows.map((con: ConVar) => Object.setPrototypeOf(con, ConVar.prototype));
     }
 }
@@ -44,6 +41,8 @@ export abstract class ConsistenciaDB {
 }
 
 export class Consistencia extends ConsistenciaDB {
+    static mainTD:string;
+    static orderedTDNames:string[];
 
     insumosVars: Variable[];
     client: Client;
@@ -88,8 +87,9 @@ export class Consistencia extends ConsistenciaDB {
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
         let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
-        if (insumosTDNames.indexOf(mainTD) == -1){ insumosTDNames.push(mainTD) }
-        let orderedInsumosTDNames:string[] = orderedTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        insumosTDNames = insumosTDNames.filter((elem, index, self) => index === self.indexOf(elem)) //remove duplicated
+        if (insumosTDNames.indexOf(Consistencia.mainTD) == -1){ insumosTDNames.push(Consistencia.mainTD) }
+        let orderedInsumosTDNames:string[] = Consistencia.orderedTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
         
         let firstTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
         let lastTD = this.opGen.getTD(orderedInsumosTDNames[orderedInsumosTDNames.length-1]); //tabla mas específicas (padre)
@@ -117,28 +117,28 @@ export class Consistencia extends ConsistenciaDB {
         // execute select final para ver si pasa
         // TODO: agregar try catch de sql
         let selectQuery = `
-            SELECT ${await this.getCompleteClausule()}
-                  AND ${mainTD}.operativo=$1
-                  AND ${mainTD}.id_caso='-1'`;
+            SELECT ${this.getCompleteClausule(<ConVar[]><unknown[]>this.insumosVars)}
+                  AND ${Consistencia.mainTD}.operativo=$1
+                  AND ${Consistencia.mainTD}.id_caso='-1'`;
         await this.client.query(selectQuery,[this.operativo]).execute();
     }
 
-    async getCompleteClausule(): Promise<string> {
-        return `${await this.getSelectFields()}
+    //TODO: unificar manejo de conVars e insumosVars desde el compilar y desde el consistir
+    getCompleteClausule(conVars:ConVar[]): string {
+        return `${this.getSelectFields(conVars)}
             ${this.clausula_from}
             ${this.clausula_where}`;
     }
 
-    async getSelectFields():Promise<string>{
+    getSelectFields(conVars:ConVar[]):string{
         return `
             '${this.operativo}',
             '${this.con}',
             jsonb_build_object(${this.getPkIntegrada()}) as pk_integrada,
-            jsonb_build_object(${await this.getInConVars()}) as incon_vars`;
+            jsonb_build_object(${this.getInConVars(conVars)}) as incon_vars`;
     }
-    async getInConVars(): Promise<string> {
-        var conVars = await ConVar.fetchAll(this.client, this.operativo, this.con);
-        return conVars.map(v=>`'${v.tabla_datos}.${v.variable}',${v.tabla_datos.endsWith('calculada')? AppOperativos.prefixTableName(v.tabla_datos,this.operativo): v.tabla_datos}.${v.variable}`).join(',')
+    getInConVars(conVars:ConVar[]):string {
+        return conVars.map(conVar=>`'${conVar.tabla_datos}.${conVar.variable}',${conVar.tabla_datos.endsWith('calculada')? AppOperativos.prefixTableName(conVar.tabla_datos,this.operativo): conVar.tabla_datos}.${conVar.variable}`).join(',')
     }
 
     getPkIntegrada():string{
