@@ -22,10 +22,6 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
                 boton.style.backgroundColor = '';
             }
 
-            // if (! this.activa){
-            //     no mostrar botón
-            // }
-
             boton.onclick = function () {
                 boton.disabled = true;
                 boton.textContent = 'procesando...';
@@ -52,10 +48,10 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
 myOwn.clientSides.compilar = botonClientSideEnGrilla({
     nombreBoton: 'compilar',
     llamada: function (depot: myOwn.Depot) {
-        return myOwn.ajax.consistencia.compilar({
+        return depot.row.activa? myOwn.ajax.consistencia.compilar({
             operativo: depot.row.operativo,
             con: depot.row.con
-        });
+        }): alert('Debe activar la consistencia para compilarla');
     }
 });
 
