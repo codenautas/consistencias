@@ -48,7 +48,7 @@ var procedures = [
                 await operativoGenerator.fetchDataFromDB(context.client);
                 let cons = await Consistencia.fetchAll(context.client, params.operativo);
 
-                await Promise.all(cons.map(async function(con){
+                await Promise.all(cons.filter(c=>c.activa).map(async function(con){
                     await con.compilar(context.client);
                 }));
 
