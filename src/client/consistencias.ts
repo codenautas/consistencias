@@ -51,7 +51,7 @@ myOwn.clientSides.compilar = botonClientSideEnGrilla({
         return depot.row.activa? myOwn.ajax.consistencia.compilar({
             operativo: depot.row.operativo,
             con: depot.row.con
-        }): alert('Debe activar la consistencia para compilarla');
+        }): alertPromise('Debe activar la consistencia para compilarla');
     }
 });
 
