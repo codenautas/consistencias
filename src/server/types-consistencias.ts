@@ -113,14 +113,29 @@ export class Consistencia extends ConsistenciaDB {
         prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars)
         prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars)
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
+
+        //TODO: hacer esto dinámico
+        this.salvarFuncionInformado();
         
         // execute select final para ver si pasa
+        // TODO: deshardcodear id_caso de todos lados (y operativo también?)
         // TODO: agregar try catch de sql
         let selectQuery = `
             SELECT ${this.getCompleteClausule(<ConVar[]><unknown[]>this.insumosVars)}
                   AND ${Consistencia.mainTD}.operativo=$1
                   AND ${Consistencia.mainTD}.id_caso='-1'`;
         await this.client.query(selectQuery,[this.operativo]).execute();
+    }
+
+    salvarFuncionInformado() {
+        //TODO: sacar esto de acá
+        var regex=/\binformado\(null2zero\(([^()]+)\)\)/gi
+        function regexFunc(x:string, centro:string){ 
+            return 'informado('+centro+')'; 
+        }
+        this.clausula_where = this.clausula_where.replace(regex, regexFunc);
+
+        // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
     }
 
     //TODO: unificar manejo de conVars e insumosVars desde el compilar y desde el consistir
@@ -201,14 +216,16 @@ export class Consistencia extends ConsistenciaDB {
         try {
             this.cleanAll();
             await this.validateAndPreBuild();
+            await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
             this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
             throw new Error(this.error_compilacion);
-        } finally {
-            await this.updateDB();
-        }
+        } 
+        // finally {
+        //     await this.updateDB();
+        // }
     }
         
     private cleanAll() {
