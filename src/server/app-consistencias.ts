@@ -49,12 +49,12 @@ export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCa
                 inconsistencias_ultimas,
                 in_con_var
             }
-            this.appendToTableDefinition('operativos', function(tableDef){
-                tableDef.fields.push(
-                    {name: "compilar_cons" , typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'}
-                    // {name: "consistir"   , typeName: "bigint"  , editable:false, clientSide:'correr', title: 'consistir'}
-                );
-            });
+            // this.appendToTableDefinition('operativos', function(tableDef){
+            //     tableDef.fields.push(
+            //         {name: "compilar_cons" , typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'}
+            //         // {name: "consistir"   , typeName: "bigint"  , editable:false, clientSide:'correr', title: 'consistir'}
+            //     );
+            // });
         }
     }
 }
