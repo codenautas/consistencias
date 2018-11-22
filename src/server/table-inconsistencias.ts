@@ -15,9 +15,9 @@ export function inconsistencias(context:TableContext):TableDefinition{
             { name: "justificacion_previa" , typeName: "text"    , editable: false},
             { name: "autor_justificacion"  , typeName: "text"    },
             { name: "observacion"          , typeName: "text"    },
-            { name: "corrida"              , typeName: "timestamp" ,editable: false},
-            { name: "vigente"              , typeName: "boolean"  ,editable: false},
-            { name: "incon_valores"        , typeName: "jsonb"  , editable: false},
+            { name: "corrida"              , typeName: "timestamp" ,editable: false, visible: false},
+            { name: "vigente"              , typeName: "boolean"   ,editable: false, visible: false},
+            { name: "incon_valores"        , typeName: "jsonb"     , editable: false},
         ],
         primaryKey: ['operativo', 'pk_integrada', 'con'],
         foreignKeys:[
