@@ -13,15 +13,15 @@ var procedures = [
             {name:'con'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
-            try{
+            // try{
                 let operativoGenerator = new OperativoGenerator(params.operativo);
                 await operativoGenerator.fetchDataFromDB(context.client);
                 let con = await Consistencia.fetchOne(context.client, params.operativo, params.con);
                 await con.compilar(context.client)
                 return 'listo';
-            }catch(e){
-                return 'error compilación';
-            }
+            // }catch(e){
+            //     return 'error compilación';
+            // }
         }
     },
     {
@@ -43,7 +43,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
-            try{
+            // try{
                 let operativoGenerator = new OperativoGenerator(params.operativo);
                 await operativoGenerator.fetchDataFromDB(context.client);
                 let cons = await Consistencia.fetchAll(context.client, params.operativo);
@@ -53,9 +53,9 @@ var procedures = [
                 }));
 
                 return 'listo';
-            }catch(e){
-                return 'error compilación'
-            }
+            // }catch(e){
+            //     return 'error compilación'
+            // }
         }
     },
     {
