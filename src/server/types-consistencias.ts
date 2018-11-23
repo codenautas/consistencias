@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { Client } from 'pg-promise-strict';
-import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable } from 'varcal';
+import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, hasPrefix, getElementWithoutPrefix } from 'varcal';
 
 export * from 'varcal';
 
@@ -157,7 +157,7 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     getPkIntegrada():string{
-        return this.campos_pk.split(',').map(campoConAlias=> `'${campoConAlias.split('.')[1]}', ${campoConAlias}`).join(',');
+        return this.campos_pk.split(',').map(campoConAlias=> `'${getElementWithoutPrefix(campoConAlias)}', ${campoConAlias}`).join(',');
     }
 
     getMixConditions(){
@@ -198,12 +198,17 @@ export class Consistencia extends ConsistenciaDB {
 
     validateFunctions(funcNames: string[]) {
         let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
-        //TODO sacar el esquema comun, inferirlo
-        let userWhiteList = ['informado', 'dic_tradu'];
-        let whiteList = pgWitheList.concat(userWhiteList);
+        let comunSquemaWhiteList = ['informado'];
+        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
         funcNames.forEach(f => {
-            if (whiteList.indexOf(f) == -1) {
-                throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + whiteList.toString());
+            if (hasPrefix(f)){
+                if (f.split('.')[0] != 'dbo'){
+                    throw new Error('La Función ' + f + ' contiene un prefijo inválido');
+                }
+            } else {
+                if (functionWhiteList.indexOf(f) == -1) {
+                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
+                }
             }
         })
     }
