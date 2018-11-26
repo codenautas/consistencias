@@ -3,7 +3,7 @@
 import { ProcedureContext, OperativoGenerator } from "operativos";
 import { ConsistenciasGenerator, Consistencia } from "./types-consistencias";
 
-type ConsistenciasPk = {operativo: string, con: string}
+type ConsistenciasPk = {operativo: string, consistencia: string}
 
 var procedures = [
     {
@@ -16,7 +16,7 @@ var procedures = [
             // try{
                 let operativoGenerator = new OperativoGenerator(params.operativo);
                 await operativoGenerator.fetchDataFromDB(context.client);
-                let con = await Consistencia.fetchOne(context.client, params.operativo, params.con);
+                let con = await Consistencia.fetchOne(context.client, params.operativo, params.consistencia);
                 await con.compilar(context.client)
                 return 'listo';
             // }catch(e){
@@ -33,7 +33,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             let operativoGenerator = new OperativoGenerator(params.operativo);
             await operativoGenerator.fetchDataFromDB(context.client);
-            await (await Consistencia.fetchOne(context.client, params.operativo, params.con)).correr()
+            await (await Consistencia.fetchOne(context.client, params.operativo, params.consistencia)).correr()
             return 'listo';
         }
     },

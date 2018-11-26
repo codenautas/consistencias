@@ -10,7 +10,7 @@ export function consistencias(context:TableContext):TableDefinition{
         fields: [
             { name: "compilar"              , typeName:'bigint' , editable:false, clientSide:'compilar'},
             { name: "operativo"         , typeName:'text'     },
-            { name: "con"               , typeName: "text"    }, //TODO: cambiar de con a consistencia
+            { name: "consistencia"      , typeName: "text"    }, //TODO: cambiar de con a consistencia
             { name: "precondicion"      , typeName: "text"    },
             { name: "postcondicion"     , typeName: "text"    , nullable:false},
             { name: "activa"            , typeName: "boolean" , nullable:false },
@@ -29,12 +29,12 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: 'compilada'             , typeName:'timestamp'   , editable:false },
             // { name: "correr"                , typeName:'bigint' , editable:false, clientSide:'correr'}
         ],
-        primaryKey: ['operativo','con'],
+        primaryKey: ['operativo','consistencia'],
         foreignKeys:[
             {references:'operativos', fields:['operativo']},
         ],
         detailTables: [
-            { table: 'con_var', fields: ['operativo', 'con'], abr: 'V', label: 'variables' }
+            { table: 'con_var', fields: ['operativo', 'consistencia'], abr: 'V', label: 'variables' }
         ]
     }
 }

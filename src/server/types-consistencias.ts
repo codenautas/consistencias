@@ -6,7 +6,7 @@ export * from 'varcal';
 
 export class ConVarDB{
     operativo: string
-    con: string
+    consistencia: string
     variable: string
     tabla_datos: string
     texto: string
@@ -15,13 +15,13 @@ export class ConVarDB{
 export class ConVar extends ConVarDB{
     static async fetchAll(client: Client, op: string): Promise<ConVar[]> {
         let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1`, [op]).fetchAll();
-        return <ConVar[]>result.rows.map((con: ConVar) => Object.setPrototypeOf(con, ConVar.prototype));
+        return <ConVar[]>result.rows.map((cv: ConVar) => Object.setPrototypeOf(cv, ConVar.prototype));
     }
 }
 
 export abstract class ConsistenciaDB {
     operativo: string
-    con: string
+    consistencia: string
     precondicion?: string
     postcondicion: string
     activa: boolean
@@ -50,7 +50,7 @@ export class Consistencia extends ConsistenciaDB {
     opGen: OperativoGenerator;
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
-        let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.con = $2`, [op, con]).fetchUniqueRow();
+        let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
         return Object.assign(new Consistencia(), result.row);
     }
 
@@ -148,7 +148,7 @@ export class Consistencia extends ConsistenciaDB {
     getSelectFields(conVars:ConVar[]):string{
         return `
             '${this.operativo}',
-            '${this.con}',
+            '${this.consistencia}',
             jsonb_build_object(${this.getPkIntegrada()}) as pk_integrada,
             jsonb_build_object(${this.getInConVars(conVars)}) as incon_vars`;
     }
@@ -172,7 +172,7 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     msgErrorCompilación(){
-        return `La consistencia "${this.con}" del operativo "${this.opGen.operativo}" es inválida. `;
+        return `La consistencia "${this.consistencia}" del operativo "${this.opGen.operativo}" es inválida. `;
     }
 
     //TODO: ADD PREFIJOS!! (alias)
@@ -252,7 +252,7 @@ export class Consistencia extends ConsistenciaDB {
     // Entonces haciendo execute diferentes se podrá organizar el código mas modularmente, usar query params y no necesitar poner
     // do begin end.
     async updateDB(): Promise<any> {
-        let basicParams = [this.operativo, this.con];
+        let basicParams = [this.operativo, this.consistencia];
         //delete con_var
         await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND con=$2', basicParams).execute();
 
@@ -277,7 +277,7 @@ export class Consistencia extends ConsistenciaDB {
 
     correr() {
         if (!this.valida) { 
-            throw new Error('La consistencia ' + this.con + ' debe haber compilado exitosamente');
+            throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
         }
     }
 }

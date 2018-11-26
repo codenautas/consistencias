@@ -8,14 +8,14 @@ export function con_var():TableDefinition{
         editable: true,
         fields: [
             {name:"operativo"        , typeName:'text'         },
-            {name:"con"              , typeName:'text'         },
+            {name:"consistencia"     , typeName:'text'         },
             {name:"variable"         , typeName:'text'         },
             {name:"tabla_datos"      , typeName:'text'         },
             {name:"texto"            , typeName:'text'         },
         ],
-        primaryKey: ['operativo','con', 'tabla_datos', 'variable'],
+        primaryKey: ['operativo','consistencia', 'tabla_datos', 'variable'],
         foreignKeys:[
-            {references:'consistencias', fields:['operativo', 'con']},
+            {references:'consistencias', fields:['operativo', 'consistencia']},
             {references:'variables', fields:['operativo', 'tabla_datos','variable']}
         ],
     }

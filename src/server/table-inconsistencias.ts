@@ -10,7 +10,7 @@ export function inconsistencias(context:TableContext):TableDefinition{
         fields: [
             { name: "operativo"            , typeName:'text'     },
             { name: "pk_integrada"         , typeName: 'jsonb'   },
-            { name: "con"                  , typeName: "text"    , editable: false },
+            { name: "consistencia"         , typeName: "text"    , editable: false },
             { name: "justificacion"        , typeName: "text" },
             { name: "justificacion_previa" , typeName: "text"    , editable: false},
             { name: "autor_justificacion"  , typeName: "text"    },
@@ -19,13 +19,13 @@ export function inconsistencias(context:TableContext):TableDefinition{
             { name: "vigente"              , typeName: "boolean"   ,editable: false, visible: false},
             { name: "incon_valores"        , typeName: "jsonb"     , editable: false},
         ],
-        primaryKey: ['operativo', 'pk_integrada', 'con'],
+        primaryKey: ['operativo', 'pk_integrada', 'consistencia'],
         foreignKeys:[
             {references:'operativos', fields:['operativo']},
-            {references:'consistencias', fields:['operativo', 'con']},
+            {references:'consistencias', fields:['operativo', 'consistencia']},
         ],
         // detailTables: [
-        //     { table: 'in_con_var', fields: ['operativo', 'con', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
+        //     { table: 'in_con_var', fields: ['operativo', 'consistencia', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
         // ]
     }
 }

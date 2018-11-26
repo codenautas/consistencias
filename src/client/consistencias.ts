@@ -51,7 +51,7 @@ myOwn.clientSides.compilar = botonClientSideEnGrilla({
         //TODO: Mejorar el alert de compilar consistencia inactiva o mejor aun esconder boton cuando está inactiva
         return depot.row.activa? myOwn.ajax.consistencia.compilar({
             operativo: depot.row.operativo,
-            con: depot.row.con
+            consistencia: depot.row.consistencia
         }): alertPromise('Debe activar la consistencia para poder compilarla');
     }
 });
@@ -70,7 +70,7 @@ myOwn.clientSides.compilarTodas = botonClientSideEnGrilla({
 //     llamada: function (depot: myOwn.Depot) {
 //         return myOwn.ajax.consistencia.correr({
 //             operativo: depot.row.operativo,
-//             con: depot.row.con
+//             consistencia: depot.row.consistencia
 //         });
 //     }
 // });
