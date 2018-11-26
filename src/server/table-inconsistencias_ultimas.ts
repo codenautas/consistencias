@@ -25,7 +25,7 @@ export function inconsistencias_ultimas(context:TableContext):TableDefinition{
             {references:'consistencias', fields:['operativo', 'consistencia']},
         ],
         // detailTables: [
-        //     { table: 'in_con_var', fields: ['operativo', 'con', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
+        //     { table: 'in_con_var', fields: ['operativo', 'consistencia', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
         // ]
     }
 }

@@ -10,7 +10,7 @@ var procedures = [
         action:'consistencia/compilar',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
-            {name:'con'        , typeName:'text', references:'consistencias'},
+            {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             // try{
@@ -28,7 +28,7 @@ var procedures = [
         action:'consistencia/correr',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
-            {name:'con'        , typeName:'text', references:'consistencias'},
+            {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             let operativoGenerator = new OperativoGenerator(params.operativo);

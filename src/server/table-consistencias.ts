@@ -10,7 +10,7 @@ export function consistencias(context:TableContext):TableDefinition{
         fields: [
             { name: "compilar"              , typeName:'bigint' , editable:false, clientSide:'compilar'},
             { name: "operativo"         , typeName:'text'     },
-            { name: "consistencia"      , typeName: "text"    }, //TODO: cambiar de con a consistencia
+            { name: "consistencia"      , typeName: "text"    },
             { name: "precondicion"      , typeName: "text"    },
             { name: "postcondicion"     , typeName: "text"    , nullable:false},
             { name: "activa"            , typeName: "boolean" , nullable:false },

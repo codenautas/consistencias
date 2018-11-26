@@ -254,11 +254,11 @@ export class Consistencia extends ConsistenciaDB {
     async updateDB(): Promise<any> {
         let basicParams = [this.operativo, this.consistencia];
         //delete con_var
-        await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND con=$2', basicParams).execute();
+        await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND consistencia=$2', basicParams).execute();
 
         // insert con_vars
         if(this.insumosVars.length > 0){
-            let conVarInsertsQuery =  `INSERT INTO con_var (operativo, con, variable, tabla_datos, texto) VALUES 
+            let conVarInsertsQuery =  `INSERT INTO con_var (operativo, consistencia, variable, tabla_datos, texto) VALUES 
             ${this.insumosVars.map(ivar=>`($1, $2,'${ivar.variable}','${ivar.tabla_datos}','${ivar.nombre}')`).join(', ')}`;
             await this.client.query(conVarInsertsQuery, basicParams).execute();
         }
@@ -266,11 +266,11 @@ export class Consistencia extends ConsistenciaDB {
         // update consistencias query
         let fieldsToUpdate = ['valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
         let esto:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
-        // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y con=$2
+        // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y consistencia=$2
         let conUpdateQuery = `UPDATE consistencias SET 
             compilada=${this.compilada? 'current_timestamp': 'null'},
             ${fieldsToUpdate.map((fieldName, index)=> `${fieldName}=$${index+3}`).join(', ')}
-            WHERE operativo=$1 AND con=$2`;
+            WHERE operativo=$1 AND consistencia=$2`;
         let params=basicParams.concat(fieldsToUpdate.map(f=> esto[f] ));
         await this.client.query(conUpdateQuery, params).execute();
     }
