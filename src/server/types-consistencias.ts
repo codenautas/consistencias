@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { Client } from 'pg-promise-strict';
-import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, hasPrefix, getElementWithoutPrefix } from 'varcal';
+import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, hasPrefix, getElementWithoutPrefix, TablaDatos } from 'varcal';
 
 export * from 'varcal';
 
@@ -42,7 +42,8 @@ export abstract class ConsistenciaDB {
 
 export class Consistencia extends ConsistenciaDB {
     static mainTD:string;
-    static orderedTDNames:string[];
+    static orderedIngresoTDNames:string[];
+    static orderedReferencialesTDNames:string[];
 
     insumosVars: Variable[];
     client: Client;
@@ -86,36 +87,21 @@ export class Consistencia extends ConsistenciaDB {
         // terceras: las tds que tengan en "que busco" a las segundas
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
-        let insumosTDNames:string[] = this.insumosVars.map(v=>v.tabla_datos);
-        insumosTDNames = insumosTDNames.filter((elem, index, self) => index === self.indexOf(elem)) //remove duplicated
-        if (insumosTDNames.indexOf(Consistencia.mainTD) == -1){ insumosTDNames.push(Consistencia.mainTD) }
-        let orderedInsumosTDNames:string[] = Consistencia.orderedTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let insumosTDNames: string[] = this.getInsumosTD();
+
+        let orderedInsumosIngresoTDNames:string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let orderedInsumosReferencialesTDNames:string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         
-        let firstTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
-        let lastTD = this.opGen.getTD(orderedInsumosTDNames[orderedInsumosTDNames.length-1]); //tabla mas específicas (padre)
+        let lastTD = this.opGen.getTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length-1]); //tabla mas específicas (hija)
 
         //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
         this.campos_pk = lastTD.getPKsWitAlias().join(',');
 
-        //calculo de clausula from
-        this.clausula_from = 'FROM '+ firstTD.getTableName();
-        for(let i=1; i < orderedInsumosTDNames.length; i++){
-            let leftInsumoTDName = orderedInsumosTDNames[i-1];
-            let rightInsumoTDName = orderedInsumosTDNames[i];
-            this.clausula_from += this.opGen.joinTDs(leftInsumoTDName, rightInsumoTDName);
-        }
-        
-        //calculo de clausula where
-        this.precondicion = getWrappedExpression(this.precondicion, lastTD.getPKCSV(), compilerOptions);
-        this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getPKCSV(), compilerOptions);
-        prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars)
-        prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars)
-        this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
-
-        //TODO: hacer esto dinámico
-        this.salvarFuncionInformado();
+        this.buildClausulaFrom(orderedInsumosTDNames);
+        this.buildClausulaWhere(lastTD);
         
         // execute select final para ver si pasa
         // TODO: deshardcodear id_caso de todos lados (y operativo también?)
@@ -125,6 +111,36 @@ export class Consistencia extends ConsistenciaDB {
                   AND ${Consistencia.mainTD}.operativo=$1
                   AND ${Consistencia.mainTD}.id_caso='-1'`;
         await this.client.query(selectQuery,[this.operativo]).execute();
+    }
+
+    private getInsumosTD() {
+        let insumosTDNames: string[] = this.insumosVars.map(v => v.tabla_datos);
+        insumosTDNames = insumosTDNames.filter((elem, index, self) => index === self.indexOf(elem)); //remove duplicated
+        if (insumosTDNames.indexOf(Consistencia.mainTD) == -1) {
+            insumosTDNames.push(Consistencia.mainTD);
+        }
+        return insumosTDNames;
+    }
+
+    private buildClausulaWhere(lastTD: TablaDatos) {
+        this.precondicion = getWrappedExpression(this.precondicion, lastTD.getPKCSV(), compilerOptions);
+        this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getPKCSV(), compilerOptions);
+        prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars);
+        prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars);
+        this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
+        
+        //TODO: hacer esto dinámico
+        this.salvarFuncionInformado();
+    }
+
+    private buildClausulaFrom(orderedInsumosTDNames: string[]) {
+        let firstTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+        this.clausula_from = 'FROM ' + firstTD.getTableName();
+        for (let i = 1; i < orderedInsumosTDNames.length; i++) {
+            let leftInsumoTDName = orderedInsumosTDNames[i - 1];
+            let rightInsumoTDName = orderedInsumosTDNames[i];
+            this.clausula_from += this.opGen.joinTDs(leftInsumoTDName, rightInsumoTDName);
+        }
     }
 
     salvarFuncionInformado() {
@@ -179,7 +195,9 @@ export class Consistencia extends ConsistenciaDB {
     validateVars(varNames: string[]): void {
         let operativoGenerator = this.opGen;
         varNames.forEach(varName => {
-            let varsFound = operativoGenerator.myVars.filter(v => v.variable == varName);
+            let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
+            let ingresoVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
+            let varsFound = ingresoVars.filter(v => v.variable == varName);
             if (varsFound.length > 1) {
                 throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
             } else if (varsFound.length <= 0) {
@@ -222,6 +240,7 @@ export class Consistencia extends ConsistenciaDB {
             this.cleanAll();
             await this.validateAndPreBuild();
             await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
+            await this.correr();
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
