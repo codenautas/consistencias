@@ -93,7 +93,7 @@ export class Consistencia extends ConsistenciaDB {
         let orderedInsumosReferencialesTDNames:string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
         let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         
-        let lastTD = this.opGen.getTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length-1]); //tabla mas específicas (hija)
+        let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length-1]); //tabla mas específicas (hija)
 
         //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
@@ -134,7 +134,7 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private buildClausulaFrom(orderedInsumosTDNames: string[]) {
-        let firstTD = this.opGen.getTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+        let firstTD = this.opGen.getUniqueTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
         this.clausula_from = 'FROM ' + firstTD.getTableName();
         for (let i = 1; i < orderedInsumosTDNames.length; i++) {
             let leftInsumoTDName = orderedInsumosTDNames[i - 1];
@@ -196,8 +196,8 @@ export class Consistencia extends ConsistenciaDB {
         let operativoGenerator = this.opGen;
         varNames.forEach(varName => {
             let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
-            let ingresoVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
-            let varsFound = ingresoVars.filter(v => v.variable == varName);
+            let validVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
+            let varsFound = validVars.filter(v => v.variable == varName);
             if (varsFound.length > 1) {
                 throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
             } else if (varsFound.length <= 0) {
@@ -240,7 +240,7 @@ export class Consistencia extends ConsistenciaDB {
             this.cleanAll();
             await this.validateAndPreBuild();
             await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
-            await this.correr();
+            //await this.correr();
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
