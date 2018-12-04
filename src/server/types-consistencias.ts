@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
-import { Client } from 'pg-promise-strict';
-import { AppOperativos, compilerOptions, getWrappedExpression, OperativoGenerator, prefijarExpresion, Variable, hasPrefix, getElementWithoutPrefix, TablaDatos } from 'varcal';
+import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
+import { AppOperativos, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, addAliasesToExpression, TablaDatos, Variable } from 'varcal';
 
 export * from 'varcal';
 
@@ -60,7 +60,7 @@ export class Consistencia extends ConsistenciaDB {
         return <Consistencia[]>result.rows.map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
     }
 
-    async validateAndPreBuild(): Promise<void> {
+    private async validateAndPreBuild(): Promise<void> {
         this.validatePreAndPostCond();
         this.validateCondInsumos();
         await this.validateCondSql();
@@ -69,7 +69,7 @@ export class Consistencia extends ConsistenciaDB {
         this.valida = true;
     }
 
-    validatePreAndPostCond(): any {
+    private validatePreAndPostCond(): any {
         // valida o "sanitiza" la pre cond
         if (this.precondicion){
             EP.parse(this.precondicion)
@@ -80,7 +80,7 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
-    async validateCondSql() {
+    private async validateCondSql() {
         // TODO: ORDENAR dinamicamente:
         // primero: la td que no tenga ninguna TD en que busco es la principal
         // segundas: van todas las tds que tengan en "que_busco" a la principal
@@ -106,10 +106,11 @@ export class Consistencia extends ConsistenciaDB {
         // execute select final para ver si pasa
         // TODO: deshardcodear id_caso de todos lados (y operativo también?)
         // TODO: agregar try catch de sql
+        // TODO: hacer que el completeClausule reciba o bien un lista de variables o bien una de inconvars
         let selectQuery = `
             SELECT ${this.getCompleteClausule(<ConVar[]><unknown[]>this.insumosVars)}
-                  AND ${Consistencia.mainTD}.operativo=$1
-                  AND ${Consistencia.mainTD}.id_caso='-1'`;
+                  AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
+                  AND ${quoteIdent(Consistencia.mainTD)}.id_caso='-1'`;
         await this.client.query(selectQuery,[this.operativo]).execute();
     }
 
@@ -123,10 +124,10 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private buildClausulaWhere(lastTD: TablaDatos) {
-        this.precondicion = getWrappedExpression(this.precondicion, lastTD.getPKCSV(), compilerOptions);
-        this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getPKCSV(), compilerOptions);
-        prefijarExpresion(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars);
-        prefijarExpresion(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars);
+        this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
+        this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
         
         //TODO: hacer esto dinámico
@@ -135,7 +136,7 @@ export class Consistencia extends ConsistenciaDB {
 
     private buildClausulaFrom(orderedInsumosTDNames: string[]) {
         let firstTD = this.opGen.getUniqueTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
-        this.clausula_from = 'FROM ' + firstTD.getTableName();
+        this.clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
         for (let i = 1; i < orderedInsumosTDNames.length; i++) {
             let leftInsumoTDName = orderedInsumosTDNames[i - 1];
             let rightInsumoTDName = orderedInsumosTDNames[i];
@@ -161,38 +162,53 @@ export class Consistencia extends ConsistenciaDB {
             ${this.clausula_where}`;
     }
 
-    getSelectFields(conVars:ConVar[]):string{
-        return `
-            '${this.operativo}',
-            '${this.consistencia}',
-            jsonb_build_object(${this.getPkIntegrada()}) as pk_integrada,
-            jsonb_build_object(${this.getInConVars(conVars)}) as incon_vars`;
-    }
-    getInConVars(conVars:ConVar[]):string {
-        return conVars.map(conVar=>`'${conVar.tabla_datos}.${conVar.variable}',${conVar.tabla_datos.endsWith('calculada')? AppOperativos.prefixTableName(conVar.tabla_datos,this.operativo): conVar.tabla_datos}.${conVar.variable}`).join(',')
+    private getSelectFields(conVars:ConVar[]):string{
+        return `${quoteLiteral(this.operativo)},
+            ${quoteLiteral(this.consistencia)},
+            ${this.getPkIntegrada()},
+            ${this.getInConVars(conVars)}`;
     }
 
-    getPkIntegrada():string{
-        return this.campos_pk.split(',').map(campoConAlias=> `'${getElementWithoutPrefix(campoConAlias)}', ${campoConAlias}`).join(',');
+    private getInConVars(conVars:ConVar[]):string {
+        return 'jsonb_build_object(' + conVars.map(conVar=>this.getConVarJsonB(conVar)).join(',') + ') as incon_vars';
     }
 
-    getMixConditions(){
+    private getConVarJsonB(conVar: ConVar) {
+        let jsonbPropertyKey = quoteLiteral(conVar.tabla_datos + '.' + conVar.variable);
+        let jsonbValueAlias = conVar.tabla_datos.endsWith('calculada') ? AppOperativos.prefixTableName(conVar.tabla_datos, this.operativo) : conVar.tabla_datos;
+        return `${jsonbPropertyKey},${quoteIdent(jsonbValueAlias)}.${quoteIdent(conVar.variable)}`;
+    }
+
+    //TODO: ahora estamos usando en varios lados la función quoteLiteral exportada directamente del paquete pg-promise-strict, luego habría que usarla desde la app
+    // porque en el futuro la app podría quotear distinto según la DB.
+    private getPkIntegrada():string{
+        return `jsonb_build_object(
+          ${this.campos_pk.split(',').map(campoConAlias=> Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
+        ) as pk_integrada`;
+    }
+
+    private static pkIntegradaElement(campoConAlias:string){
+        let [alias, field] = campoConAlias.split('.');
+        return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
+    }
+
+    private getMixConditions(){
         return '(' + this.precondicion + ') AND (' + this.postcondicion + ')';
     }
 
     // chequear que todas las variables de la cond existan en alguna tabla (sino se llena el campo error_compilacion)
-    validateCondInsumos(): void {
+    private validateCondInsumos(): void {
         this.condInsumos = EP.parse(this.getMixConditions()).getInsumos();
         this.validateFunctions(this.condInsumos.funciones);
         this.validateVars(this.condInsumos.variables);
     }
 
-    msgErrorCompilación(){
+    private msgErrorCompilación(){
         return `La consistencia "${this.consistencia}" del operativo "${this.opGen.operativo}" es inválida. `;
     }
 
     //TODO: ADD PREFIJOS!! (alias)
-    validateVars(varNames: string[]): void {
+    private validateVars(varNames: string[]): void {
         let operativoGenerator = this.opGen;
         varNames.forEach(varName => {
             let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
@@ -211,17 +227,17 @@ export class Consistencia extends ConsistenciaDB {
 
         // TODO:
         // y si tiene alias ver que esten en relaciones
-        // si la variable está prefijada con un alias -> que esté el prefijo
+        // si la variable tiene un alias -> que el mismo existan
     }
 
-    validateFunctions(funcNames: string[]) {
+    private validateFunctions(funcNames: string[]) {
         let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
         let comunSquemaWhiteList = ['informado'];
         let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
         funcNames.forEach(f => {
-            if (hasPrefix(f)){
+            if (hasAlias(f)){
                 if (f.split('.')[0] != 'dbo'){
-                    throw new Error('La Función ' + f + ' contiene un prefijo inválido');
+                    throw new Error('La Función ' + f + ' contiene un alias inválido');
                 }
             } else {
                 if (functionWhiteList.indexOf(f) == -1) {
@@ -270,7 +286,7 @@ export class Consistencia extends ConsistenciaDB {
     // "se ahorra" bastante overhead de levantar una nueva transacción. Esto es: un motivo mas para no hacer una query choclaso.
     // Entonces haciendo execute diferentes se podrá organizar el código mas modularmente, usar query params y no necesitar poner
     // do begin end.
-    async updateDB(): Promise<any> {
+    private async updateDB(): Promise<any> {
         let basicParams = [this.operativo, this.consistencia];
         //delete con_var
         await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND consistencia=$2', basicParams).execute();
@@ -278,7 +294,7 @@ export class Consistencia extends ConsistenciaDB {
         // insert con_vars
         if(this.insumosVars.length > 0){
             let conVarInsertsQuery =  `INSERT INTO con_var (operativo, consistencia, variable, tabla_datos, texto) VALUES 
-            ${this.insumosVars.map(ivar=>`($1, $2,'${ivar.variable}','${ivar.tabla_datos}','${ivar.nombre}')`).join(', ')}`;
+            ${this.insumosVars.map(ivar=>`($1, $2,${quoteLiteral(ivar.variable)},${quoteLiteral(ivar.tabla_datos)},${quoteNullable(ivar.nombre)})`).join(', ')}`;
             await this.client.query(conVarInsertsQuery, basicParams).execute();
         }
 
@@ -288,9 +304,9 @@ export class Consistencia extends ConsistenciaDB {
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y consistencia=$2
         let conUpdateQuery = `UPDATE consistencias SET 
             compilada=${this.compilada? 'current_timestamp': 'null'},
-            ${fieldsToUpdate.map((fieldName, index)=> `${fieldName}=$${index+3}`).join(', ')}
+            ${fieldsToUpdate.map((fieldName, index)=> `${quoteIdent(fieldName)}=$${index+3}`).join(', ')}
             WHERE operativo=$1 AND consistencia=$2`;
-        let params=basicParams.concat(fieldsToUpdate.map(f=> esto[f] ));
+        let params=basicParams.concat(fieldsToUpdate.map(f=> esto[f]));
         await this.client.query(conUpdateQuery, params).execute();
     }
 
