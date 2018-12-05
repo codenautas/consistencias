@@ -210,9 +210,9 @@ export class Consistencia extends ConsistenciaDB {
     //TODO: ADD PREFIJOS!! (alias)
     private validateVars(varNames: string[]): void {
         let operativoGenerator = this.opGen;
+        let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
+        let validVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
         varNames.forEach(varName => {
-            let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
-            let validVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
             let varsFound = validVars.filter(v => v.variable == varName);
             if (varsFound.length > 1) {
                 throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
