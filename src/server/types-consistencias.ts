@@ -4,7 +4,7 @@ import { AppOperativos, compilerOptions, getWrappedExpression, hasAlias, Operati
 
 export * from 'varcal';
 
-export class ConVarDB{
+export class ConVarDB {
     operativo: string
     consistencia: string
     variable: string
@@ -12,7 +12,7 @@ export class ConVarDB{
     texto: string
 }
 
-export class ConVar extends ConVarDB{
+export class ConVar extends ConVarDB {
     static async fetchAll(client: Client, op: string): Promise<ConVar[]> {
         let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1`, [op]).fetchAll();
         return <ConVar[]>result.rows.map((cv: ConVar) => Object.setPrototypeOf(cv, ConVar.prototype));
@@ -41,9 +41,10 @@ export abstract class ConsistenciaDB {
 }
 
 export class Consistencia extends ConsistenciaDB {
-    static mainTD:string;
-    static orderedIngresoTDNames:string[];
-    static orderedReferencialesTDNames:string[];
+    static mainTD: string;
+    static orderedIngresoTDNames: string[];
+    static orderedReferencialesTDNames: string[];
+    static validRelations: string[];
 
     insumosVars: Variable[];
     client: Client;
@@ -71,9 +72,9 @@ export class Consistencia extends ConsistenciaDB {
 
     private validatePreAndPostCond(): any {
         // valida o "sanitiza" la pre cond
-        if (this.precondicion){
+        if (this.precondicion) {
             EP.parse(this.precondicion)
-        }else{
+        } else {
             this.precondicion = 'true'
         }
         EP.parse(this.postcondicion)
@@ -89,11 +90,11 @@ export class Consistencia extends ConsistenciaDB {
         // TODO: deshardcodear main TD
         let insumosTDNames: string[] = this.getInsumosTD();
 
-        let orderedInsumosIngresoTDNames:string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
-        let orderedInsumosReferencialesTDNames:string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let orderedInsumosIngresoTDNames: string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let orderedInsumosReferencialesTDNames: string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
         let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
-        
-        let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length-1]); //tabla mas específicas (hija)
+
+        let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
 
         //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
@@ -102,7 +103,7 @@ export class Consistencia extends ConsistenciaDB {
 
         this.buildClausulaFrom(orderedInsumosTDNames);
         this.buildClausulaWhere(lastTD);
-        
+
         // execute select final para ver si pasa
         // TODO: deshardcodear id_caso de todos lados (y operativo también?)
         // TODO: agregar try catch de sql
@@ -111,7 +112,7 @@ export class Consistencia extends ConsistenciaDB {
             SELECT ${this.getCompleteClausule(<ConVar[]><unknown[]>this.insumosVars)}
                   AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
                   AND ${quoteIdent(Consistencia.mainTD)}.id_caso='-1'`;
-        await this.client.query(selectQuery,[this.operativo]).execute();
+        await this.client.query(selectQuery, [this.operativo]).execute();
     }
 
     private getInsumosTD() {
@@ -129,7 +130,7 @@ export class Consistencia extends ConsistenciaDB {
         this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
-        
+
         //TODO: hacer esto dinámico
         this.salvarFuncionInformado();
     }
@@ -146,9 +147,9 @@ export class Consistencia extends ConsistenciaDB {
 
     salvarFuncionInformado() {
         //TODO: sacar esto de acá
-        var regex=/\binformado\(null2zero\(([^()]+)\)\)/gi
-        function regexFunc(x:string, centro:string){ 
-            return 'informado('+centro+')'; 
+        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
+        function regexFunc(x: string, centro: string) {
+            return 'informado(' + centro + ')';
         }
         this.clausula_where = this.clausula_where.replace(regex, regexFunc);
 
@@ -156,21 +157,21 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     //TODO: unificar manejo de conVars e insumosVars desde el compilar y desde el consistir
-    getCompleteClausule(conVars:ConVar[]): string {
+    getCompleteClausule(conVars: ConVar[]): string {
         return `${this.getSelectFields(conVars)}
             ${this.clausula_from}
             ${this.clausula_where}`;
     }
 
-    private getSelectFields(conVars:ConVar[]):string{
+    private getSelectFields(conVars: ConVar[]): string {
         return `${quoteLiteral(this.operativo)},
             ${quoteLiteral(this.consistencia)},
             ${this.getPkIntegrada()},
             ${this.getInConVars(conVars)}`;
     }
 
-    private getInConVars(conVars:ConVar[]):string {
-        return 'jsonb_build_object(' + conVars.map(conVar=>this.getConVarJsonB(conVar)).join(',') + ') as incon_vars';
+    private getInConVars(conVars: ConVar[]): string {
+        return 'jsonb_build_object(' + conVars.map(conVar => this.getConVarJsonB(conVar)).join(',') + ') as incon_vars';
     }
 
     private getConVarJsonB(conVar: ConVar) {
@@ -181,18 +182,18 @@ export class Consistencia extends ConsistenciaDB {
 
     //TODO: ahora estamos usando en varios lados la función quoteLiteral exportada directamente del paquete pg-promise-strict, luego habría que usarla desde la app
     // porque en el futuro la app podría quotear distinto según la DB.
-    private getPkIntegrada():string{
+    private getPkIntegrada(): string {
         return `jsonb_build_object(
-          ${this.campos_pk.split(',').map(campoConAlias=> Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
+          ${this.campos_pk.split(',').map(campoConAlias => Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
         ) as pk_integrada`;
     }
 
-    private static pkIntegradaElement(campoConAlias:string){
+    private static pkIntegradaElement(campoConAlias: string) {
         let [alias, field] = campoConAlias.split('.');
         return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
     }
 
-    private getMixConditions(){
+    private getMixConditions() {
         return '(' + this.precondicion + ') AND (' + this.postcondicion + ')';
     }
 
@@ -203,7 +204,7 @@ export class Consistencia extends ConsistenciaDB {
         this.validateVars(this.condInsumos.variables);
     }
 
-    private msgErrorCompilación(){
+    private msgErrorCompilación() {
         return `La consistencia "${this.consistencia}" del operativo "${this.opGen.operativo}" es inválida. `;
     }
 
@@ -211,18 +212,30 @@ export class Consistencia extends ConsistenciaDB {
     private validateVars(varNames: string[]): void {
         let operativoGenerator = this.opGen;
         let validTDNames = Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);
-        let validVars = operativoGenerator.myVars.filter(v=> validTDNames.indexOf(v.tabla_datos) > -1);
+        let validVars = operativoGenerator.myVars.filter(v => validTDNames.indexOf(v.tabla_datos) > -1);
+        //TODO: calcular las validRelations dinamicamente, ahora fijas en Consistencia.validRelations
+        let validAliases = validTDNames.concat(Consistencia.validRelations);
         varNames.forEach(varName => {
-            let varsFound = validVars.filter(v => v.variable == varName);
+            let varsFound: Variable[] = [];
+            if (hasAlias(varName)) {
+                let [varAlias, pureVarName] = varName.split('.');
+                varsFound = validVars.filter(v => v.variable == pureVarName && validAliases.indexOf(varAlias) > -1);
+            } else {
+                varsFound = validVars.filter(v => v.variable == varName);
+            }
             if (varsFound.length > 1) {
                 throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
-            } else if (varsFound.length <= 0) {
-                throw new Error('La variable "' + varName + '" no se encontró en la lista de variables');
-            } else {
-                let varFound = varsFound[0];
-                if (!varFound.activa){throw new Error('La variable "' + varName + '" no está activa.');}
-                this.insumosVars.push(varFound);
             }
+            if (varsFound.length <= 0) {
+                throw new Error('La variable "' + varName + '" no se encontró en la lista de variables');
+            }
+
+            let varFound = varsFound[0];
+            if (!varFound.activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
+
+            // TODO: para las variables de referente (p3<referente.p3) va a pushear 2 veces la variable p3, corregirlo
+            // Variable apta para compilar
+            this.insumosVars.push(varFound);
         });
 
         // TODO:
@@ -235,8 +248,8 @@ export class Consistencia extends ConsistenciaDB {
         let comunSquemaWhiteList = ['informado'];
         let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
         funcNames.forEach(f => {
-            if (hasAlias(f)){
-                if (f.split('.')[0] != 'dbo'){
+            if (hasAlias(f)) {
+                if (f.split('.')[0] != 'dbo') {
                     throw new Error('La Función ' + f + ' contiene un alias inválido');
                 }
             } else {
@@ -246,7 +259,7 @@ export class Consistencia extends ConsistenciaDB {
             }
         })
     }
-    
+
     // responsabilidades: chequear que sea valida y generar el sql 
     async compilar(client: Client) {
         this.client = client;
@@ -262,12 +275,12 @@ export class Consistencia extends ConsistenciaDB {
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
             this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
             throw new Error(this.error_compilacion);
-        } 
+        }
         // finally {
         //     await this.updateDB();
         // }
     }
-        
+
     private cleanAll() {
         // clean consistencia
         this.valida = false;
@@ -275,7 +288,7 @@ export class Consistencia extends ConsistenciaDB {
         this.clausula_from = this.clausula_where = this.campos_pk = this.error_compilacion = null;
 
         // clean con vars to insert
-        this.insumosVars=[]; 
+        this.insumosVars = [];
     }
 
     // TODO hacer distintos executes() ya que el procedure de BEPlus asegura que dentro del mismo coreFunction
@@ -292,26 +305,26 @@ export class Consistencia extends ConsistenciaDB {
         await this.client.query('DELETE FROM con_var WHERE operativo=$1 AND consistencia=$2', basicParams).execute();
 
         // insert con_vars
-        if(this.insumosVars.length > 0){
-            let conVarInsertsQuery =  `INSERT INTO con_var (operativo, consistencia, variable, tabla_datos, texto) VALUES 
-            ${this.insumosVars.map(ivar=>`($1, $2,${quoteLiteral(ivar.variable)},${quoteLiteral(ivar.tabla_datos)},${quoteNullable(ivar.nombre)})`).join(', ')}`;
+        if (this.insumosVars.length > 0) {
+            let conVarInsertsQuery = `INSERT INTO con_var (operativo, consistencia, variable, tabla_datos, texto) VALUES 
+            ${this.insumosVars.map(ivar => `($1, $2,${quoteLiteral(ivar.variable)},${quoteLiteral(ivar.tabla_datos)},${quoteNullable(ivar.nombre)})`).join(', ')}`;
             await this.client.query(conVarInsertsQuery, basicParams).execute();
         }
 
         // update consistencias query
         let fieldsToUpdate = ['valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
-        let esto:any=this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
+        let esto: any = this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y consistencia=$2
         let conUpdateQuery = `UPDATE consistencias SET 
-            compilada=${this.compilada? 'current_timestamp': 'null'},
-            ${fieldsToUpdate.map((fieldName, index)=> `${quoteIdent(fieldName)}=$${index+3}`).join(', ')}
+            compilada=${this.compilada ? 'current_timestamp' : 'null'},
+            ${fieldsToUpdate.map((fieldName, index) => `${quoteIdent(fieldName)}=$${index + 3}`).join(', ')}
             WHERE operativo=$1 AND consistencia=$2`;
-        let params=basicParams.concat(fieldsToUpdate.map(f=> esto[f]));
+        let params = basicParams.concat(fieldsToUpdate.map(f => esto[f]));
         await this.client.query(conUpdateQuery, params).execute();
     }
 
     correr() {
-        if (!this.valida) { 
+        if (!this.valida) {
             throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
         }
     }
@@ -326,7 +339,7 @@ export class ConsistenciasGenerator extends OperativoGenerator {
 
     async fetchDataFromDB(client: Client) {
         await super.fetchDataFromDB(client);
-        this.myCons = await Consistencia.fetchAll(client,this.operativo);
+        this.myCons = await Consistencia.fetchAll(client, this.operativo);
     }
 
 }
