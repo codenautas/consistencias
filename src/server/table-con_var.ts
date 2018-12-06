@@ -11,6 +11,7 @@ export function con_var():TableDefinition{
             {name:"consistencia"     , typeName:'text'         },
             {name:"variable"         , typeName:'text'         },
             {name:"tabla_datos"      , typeName:'text'         },
+            {name:"relacion"         , typeName:'text'         },
             {name:"texto"            , typeName:'text'         },
         ],
         primaryKey: ['operativo','consistencia', 'tabla_datos', 'variable'],
