@@ -110,12 +110,15 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private async testBuiltSQL() {
-        // TODO: deshardcodear id_caso de todos lados (y operativo también?)
+        // TODO: deshardcodear id_caso de todos lados y operativo también! Pero después
         let selectQuery = `
             SELECT ${this.getCompleteClausule(this.insumosConVars)}
-                  AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
+                  AND ${quoteIdent(Consistencia.mainTD)}.operativo=${quoteLiteral(this.operativo)}
                   AND ${quoteIdent(Consistencia.mainTD)}.id_caso='-1'`;
-        await this.client.query(selectQuery, [this.operativo]).execute();
+        var result = await this.client.query('select try_sql($1) as error_informado', [selectQuery]).fetchOneRowIfExists();
+        if(result.row.error_informado){
+            throw new Error(result.row.error_informado);
+        }
     }
 
     private getInsumosTD() {
@@ -295,17 +298,17 @@ export class Consistencia extends ConsistenciaDB {
         try {
             this.cleanAll();
             await this.validateAndPreBuild();
-            await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
+            // await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
             //await this.correr();
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
-            this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
-            throw new Error(this.error_compilacion);
+            this.error_compilacion = (<Error>error).message;
+            throw new Error(this.msgErrorCompilación() + this.error_compilacion);
         }
-        // finally {
-        //     await this.updateDB();
-        // }
+        finally {
+            await this.updateDB();
+        }
     }
     static validTDNames(): any {
         return Consistencia.orderedIngresoTDNames.concat(Consistencia.orderedReferencialesTDNames);

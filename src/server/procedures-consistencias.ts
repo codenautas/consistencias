@@ -7,21 +7,21 @@ type ConsistenciasPk = {operativo: string, consistencia: string}
 
 var procedures = [
     {
-        action:'consistencia/compilar',
+        action:'consistencia_compilar',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
-            // try{
+            try{
                 let operativoGenerator = new OperativoGenerator(params.operativo);
                 await operativoGenerator.fetchDataFromDB(context.client);
                 let con = await Consistencia.fetchOne(context.client, params.operativo, params.consistencia);
                 await con.compilar(context.client)
-                return 'listo';
-            // }catch(e){
-            //     return 'error compilación';
-            // }
+                return {ok:true, message:'consistencia compilada'};
+            }catch(error){
+                return {ok:false, message:error.message};
+            }
         }
     },
     {

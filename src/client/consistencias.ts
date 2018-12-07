@@ -25,21 +25,29 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
             boton.onclick = function () {
                 boton.disabled = true;
                 boton.textContent = 'procesando...';
-                opts.llamada(depot).then(function (result) {
+                opts.llamada(depot).then(function(result){
+                    var grid = depot.manager;
+                    grid.retrieveRowAndRefresh(depot).then(function(){
+                        setTimeout(restaurarBoton,3000);
+                    })
+                    if(result && 'ok' in result){
+                        if(result.ok){
+                            return result.message;
+                        }else{
+                            throw new Error(result.message);
+                        }
+                    }else{
+                        return result;
+                    }
+                }).then(function (result) {
                     // boton.disabled=false;
                     boton.textContent = '¡listo!';
                     boton.title = result;
                     boton.style.backgroundColor = '#8F8';
-                    var grid = depot.manager;
-                    grid.retrieveRowAndRefresh(depot).then(function () {
-                        // setTimeout(restaurarBoton,3000);
-                    }, function () {
-                        // setTimeout(restaurarBoton,3000);
-                    })
                 }, function (err) {
                     boton.textContent = 'error';
                     boton.style.backgroundColor = '#FF8';
-                    alertPromise(err.message).then(restaurarBoton, restaurarBoton);
+                    alertPromise(err.message);
                 })
             }
         }
@@ -49,7 +57,7 @@ myOwn.clientSides.compilar = botonClientSideEnGrilla({
     nombreBoton: 'compilar',
     llamada: function (depot: myOwn.Depot) {
         //TODO: Mejorar el alert de compilar consistencia inactiva o mejor aun esconder boton cuando está inactiva
-        return depot.row.activa? myOwn.ajax.consistencia.compilar({
+        return depot.row.activa? myOwn.ajax.consistencia_compilar({
             operativo: depot.row.operativo,
             consistencia: depot.row.consistencia
         }): alertPromise('Debe activar la consistencia para poder compilarla');
