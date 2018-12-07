@@ -1,12 +1,13 @@
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, Relaciones, TablaDatos, Variable } from 'varcal';
+import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, TablaDatos, Variable, Relacion } from 'varcal';
 
 export * from 'varcal';
 
 export class ConVarDB {
     operativo: string
     consistencia: string
+    expresion_var: string
     variable: string
     tabla_datos: string
     relacion: string
@@ -14,6 +15,9 @@ export class ConVarDB {
 }
 
 export class ConVar extends ConVarDB {
+    buildExpresionVar(): string {
+        return this.relacion? this.relacion + '.' + this.variable : this.variable;
+    }
     static async fetchAll(client: Client, op: string): Promise<ConVar[]> {
         let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1`, [op]).fetchAll();
         return <ConVar[]>result.rows.map((cv: ConVar) => Object.setPrototypeOf(cv, ConVar.prototype));
@@ -51,7 +55,7 @@ export class Consistencia extends ConsistenciaDB {
     condInsumos: EP.Insumos;
     opGen: OperativoGenerator;
     validVars: Variable[];
-    optionalRelations: Relaciones[];
+    optionalRelations: Relacion[];
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
@@ -95,9 +99,11 @@ export class Consistencia extends ConsistenciaDB {
         // terceras: las tds que tengan en "que busco" a las segundas
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
-        let insumosTDNames: string[] = this.getInsumosTD();
-        let orderedInsumosIngresoTDNames: string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1);
-        let orderedInsumosReferencialesTDNames: string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1);
+        let insumosAliases: string[] = this.getInsumosAliases();
+        let orderedInsumosIngresoTDNames: string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        let orderedInsumosReferencialesTDNames: string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        let NOTOrderedInsumosOptionalRelations: Relacion[] = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
+        
         let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
         //calculo de campos_pk
@@ -105,7 +111,7 @@ export class Consistencia extends ConsistenciaDB {
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
         this.campos_pk = lastTD.getPKsWitAlias().join(',');
-        this.buildClausulaFrom(orderedInsumosTDNames);
+        this.buildClausulaFrom(orderedInsumosTDNames, NOTOrderedInsumosOptionalRelations);
         this.buildClausulaWhere(lastTD);
     }
 
@@ -118,13 +124,13 @@ export class Consistencia extends ConsistenciaDB {
         await this.client.query(selectQuery, [this.operativo]).execute();
     }
 
-    private getInsumosTD() {
-        let insumosTDNames: string[] = this.insumosConVars.map(v => v.tabla_datos);
-        insumosTDNames = insumosTDNames.filter((elem, index, self) => index === self.indexOf(elem)); //remove duplicated
-        if (insumosTDNames.indexOf(Consistencia.mainTD) == -1) {
-            insumosTDNames.push(Consistencia.mainTD);
+    private getInsumosAliases() {
+        let insumosAliases: string[] = this.insumosConVars.map(cv => cv.relacion || cv.tabla_datos);
+        insumosAliases = insumosAliases.filter((elem, index, self) => index === self.indexOf(elem)); //remove duplicated
+        if (insumosAliases.indexOf(Consistencia.mainTD) == -1) {
+            insumosAliases.push(Consistencia.mainTD);
         }
-        return insumosTDNames;
+        return insumosAliases;
     }
 
     private buildClausulaWhere(lastTD: TablaDatos) {
@@ -138,21 +144,18 @@ export class Consistencia extends ConsistenciaDB {
         this.salvarFuncionInformado();
     }
 
-    private buildClausulaFrom(orderedInsumosTDNames: string[]) {
+    private buildClausulaFrom(orderedInsumosTDNames: string[], NOTOrderedInsumosOptionalRelations: Relacion[]) {
         let firstTD = this.opGen.getUniqueTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
         this.clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
         for (let i = 1; i < orderedInsumosTDNames.length; i++) {
-            let leftInsumoTDName = orderedInsumosTDNames[i - 1];
-            let rightInsumoTDName = orderedInsumosTDNames[i];
-            this.clausula_from += this.opGen.joinTDs(leftInsumoTDName, rightInsumoTDName);
+            let leftInsumoAlias = orderedInsumosTDNames[i - 1];
+            let rightInsumoAlias = orderedInsumosTDNames[i];
+            this.clausula_from += this.opGen.joinTDs(leftInsumoAlias, rightInsumoAlias);
         }
-    }
 
-    // LEFT JOIN (
-    //     SELECT referente.*
-    //     FROM personas referente
-    //     WHERE referente.p0=1
-    //     ) referente ON referente.id_caso=personas.id_caso AND referente.operativo=personas.operativo
+        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
+        NOTOrderedInsumosOptionalRelations.forEach(r=>this.clausula_from += this.opGen.joinRelation(r));
+    }
 
     salvarFuncionInformado() {
         //TODO: sacar esto de acá
@@ -184,7 +187,7 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private getConVarJsonB(conVar: ConVar) {
-        let jsonbPropertyKey = quoteLiteral(conVar.tabla_datos + '.' + conVar.variable);
+        let jsonbPropertyKey = quoteLiteral(conVar.relacion? conVar.relacion: conVar.tabla_datos + '.' + conVar.variable);
         let jsonbValueAlias = conVar.relacion? conVar.relacion: this.opGen.getUniqueTD(conVar.tabla_datos).getTableName();
         return `${jsonbPropertyKey},${quoteIdent(jsonbValueAlias)}.${quoteIdent(conVar.variable)}`;
     }
@@ -214,10 +217,12 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private msgErrorCompilación() {
-        return `La consistencia "${this.consistencia}" del operativo "${this.operativo}" es inválida. `;
+        return ` La consistencia "${this.consistencia}" del operativo "${this.operativo}" es inválida.`;
     }
 
     private validateVars(varNames: string[]): void {
+        this.validVars = this.opGen.myVars.filter(v => Consistencia.validTDNames().indexOf(v.tabla_datos) > -1);
+        this.optionalRelations = this.opGen.myRels.filter(rel => rel.tipo == 'opcional');
         varNames.forEach(varName => {
             let conVar = new ConVar(); // supongo que voy a encontrar una sola variable y válida
             let varsFound: Variable[] = this.findValidVars(varName, conVar);
@@ -226,20 +231,16 @@ export class Consistencia extends ConsistenciaDB {
                 throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
             }
             if (varsFound.length <= 0) {
-                throw new Error('La variable "' + varName + '" no se encontró en la lista de variables');
+                throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
             }
 
             let varFound = varsFound[0];
             if (!varFound.activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
 
             //lleno el resto de la variable a con_var
-            Object.assign(conVar, <ConVar>{operativo: varFound.operativo, consistencia: this.consistencia, tabla_datos: varFound.tabla_datos, variable:varFound.variable, texto:varFound.nombre });
+            Object.assign(conVar, <ConVar>{operativo: varFound.operativo, tabla_datos: varFound.tabla_datos, variable:varFound.variable, texto:varFound.nombre });
             this.insumosConVars.push(conVar);
         });
-
-        // TODO:
-        // y si tiene alias ver que esten en relaciones
-        // si la variable tiene un alias -> que el mismo existan
     }
 
     private findValidVars(varName: string, conVar: ConVar) {
@@ -288,9 +289,6 @@ export class Consistencia extends ConsistenciaDB {
         this.client = client;
         this.opGen = OperativoGenerator.instanceObj;
 
-        this.validVars = this.opGen.myVars.filter(v => Consistencia.validTDNames().indexOf(v.tabla_datos) > -1);
-        this.optionalRelations = this.opGen.myRels.filter(rel => rel.tipo == 'opcional');
-
         //TODO: cuando se compile en masa sacar este fetchall a una clase Compilador que lo haga una sola vez
         try {
             this.cleanAll();
@@ -300,7 +298,7 @@ export class Consistencia extends ConsistenciaDB {
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
-            this.error_compilacion = this.msgErrorCompilación() + (<Error>error).message;
+            this.error_compilacion = (<Error>error).message + this.msgErrorCompilación();
             throw new Error(this.error_compilacion);
         }
         // finally {
@@ -336,8 +334,8 @@ export class Consistencia extends ConsistenciaDB {
 
         // insert con_vars
         if (this.insumosConVars.length > 0) {
-            let conVarInsertsQuery = `INSERT INTO con_var (operativo, consistencia, variable, tabla_datos, relacion, texto) VALUES 
-            ${this.insumosConVars.map(cv => `($1, $2,${quoteLiteral(cv.variable)},${quoteLiteral(cv.tabla_datos)},${quoteNullable(cv.relacion)},${quoteNullable(cv.texto)})`).join(', ')}`;
+            let conVarInsertsQuery = `INSERT INTO con_var (operativo, consistencia, expresion_var, tabla_datos, variable, relacion, texto) VALUES 
+            ${this.insumosConVars.map(cv => `($1, $2,${quoteLiteral(cv.buildExpresionVar())},${quoteLiteral(cv.tabla_datos)},${quoteLiteral(cv.variable)},${quoteNullable(cv.relacion)},${quoteNullable(cv.texto)})`).join(', ')}`;
             await this.client.query(conVarInsertsQuery, basicParams).execute();
         }
 
