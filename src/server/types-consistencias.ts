@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, TablaDatos, Variable } from 'varcal';
+import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, Relaciones, TablaDatos, Variable } from 'varcal';
 
 export * from 'varcal';
 
@@ -51,7 +51,7 @@ export class Consistencia extends ConsistenciaDB {
     condInsumos: EP.Insumos;
     opGen: OperativoGenerator;
     validVars: Variable[];
-    optionalRelations: import("c:/development/codenautas/operativos/dist/server/types-operativos").Relaciones[];
+    optionalRelations: Relaciones[];
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
@@ -66,7 +66,7 @@ export class Consistencia extends ConsistenciaDB {
     private async validateAndPreBuild(): Promise<void> {
         this.validatePreAndPostCond();
         this.validateCondInsumos();
-        await this.validateCondSql();
+        await this.validateCondInDBMS();
         // pass all validations then complete this consistence to save afterwards
         this.compilada = new Date();
         this.valida = true;
@@ -83,7 +83,12 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
-    private async validateCondSql() {
+    private async validateCondInDBMS() {
+        this.buildSQLFromExpresions();
+        await this.testBuiltSQL();
+    }
+    
+    private buildSQLFromExpresions() {
         // TODO: ORDENAR dinamicamente:
         // primero: la td que no tenga ninguna TD en que busco es la principal
         // segundas: van todas las tds que tengan en "que_busco" a la principal
@@ -91,28 +96,23 @@ export class Consistencia extends ConsistenciaDB {
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
         let insumosTDNames: string[] = this.getInsumosTD();
-
-        let orderedInsumosIngresoTDNames: string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
-        let orderedInsumosReferencialesTDNames: string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1)
+        let orderedInsumosIngresoTDNames: string[] = Consistencia.orderedIngresoTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1);
+        let orderedInsumosReferencialesTDNames: string[] = Consistencia.orderedReferencialesTDNames.filter(orderedTDName => insumosTDNames.indexOf(orderedTDName) > -1);
         let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
-
         let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
-
         //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
         this.campos_pk = lastTD.getPKsWitAlias().join(',');
-
         this.buildClausulaFrom(orderedInsumosTDNames);
         this.buildClausulaWhere(lastTD);
+    }
 
-        // execute select final para ver si pasa
+    private async testBuiltSQL() {
         // TODO: deshardcodear id_caso de todos lados (y operativo también?)
-        // TODO: agregar try catch de sql
-        // TODO: hacer que el completeClausule reciba o bien un lista de variables o bien una de inconvars
         let selectQuery = `
-            SELECT ${this.getCompleteClausule(<ConVar[]><unknown[]>this.insumosConVars)}
+            SELECT ${this.getCompleteClausule(this.insumosConVars)}
                   AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
                   AND ${quoteIdent(Consistencia.mainTD)}.id_caso='-1'`;
         await this.client.query(selectQuery, [this.operativo]).execute();
