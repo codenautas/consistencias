@@ -190,8 +190,9 @@ export class Consistencia extends ConsistenciaDB {
     }
 
     private getConVarJsonB(conVar: ConVar) {
-        let jsonbPropertyKey = quoteLiteral(conVar.relacion? conVar.relacion: conVar.tabla_datos + '.' + conVar.variable);
-        let jsonbValueAlias = conVar.relacion? conVar.relacion: this.opGen.getUniqueTD(conVar.tabla_datos).getTableName();
+        let jsonbPropertyKey = quoteLiteral((conVar.relacion? conVar.relacion: conVar.tabla_datos) + '.' + conVar.variable);
+        //TODO: se está usando OperativoGenerator.instanceObj en lugar de this.opGen, mejorar
+        let jsonbValueAlias = conVar.relacion? conVar.relacion: OperativoGenerator.instanceObj.getUniqueTD(conVar.tabla_datos).getTableName();
         return `${jsonbPropertyKey},${quoteIdent(jsonbValueAlias)}.${quoteIdent(conVar.variable)}`;
     }
 
