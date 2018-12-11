@@ -98,11 +98,15 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, parameters:any){
             // consistir_encuesta = correr todas las consistencias para dicha encuesta
             let idCasoStr = parameters.id_caso.toString();
+            let params = [parameters.operativo, idCasoStr];
             
-            let compiler = new Compiler(parameters.operativo);
-            await compiler.fetchDataFromDB(context.client);
-            compiler.consistirCaso(idCasoStr)
+            // let compiler = new Compiler(parameters.operativo);
+            // await compiler.fetchDataFromDB(context.client);
+            // compiler.consistirCaso(idCasoStr)
 
+            // se corre VARCAL
+            await context.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, params).execute();
+            var consistencias = await Consistencia.fetchAll(context.client, parameters.operativo);
             
             // Delete all inconsistencias_ultimas
             await context.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 AND pk_integrada->>'id_caso'=$2`, params).execute();
