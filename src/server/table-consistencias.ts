@@ -34,6 +34,7 @@ export function consistencias(context:TableContext):TableDefinition{
             {references:'operativos', fields:['operativo']},
         ],
         detailTables: [
+            { table: 'inconsistencias', fields: ['operativo', 'consistencia'], abr: 'I', label: 'Inconsistencias' },
             { table: 'con_var', fields: ['operativo', 'consistencia'], abr: 'V', label: 'variables' }
         ]
     }

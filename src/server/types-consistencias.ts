@@ -106,7 +106,6 @@ export class Consistencia extends ConsistenciaDB {
         
         let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         let lastTD = this.opGen.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
-        //calculo de campos_pk
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
@@ -143,7 +142,6 @@ export class Consistencia extends ConsistenciaDB {
         this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
 
-        //TODO: hacer esto dinámico
         this.salvarFuncionInformado();
     }
 
@@ -196,8 +194,6 @@ export class Consistencia extends ConsistenciaDB {
         return `${jsonbPropertyKey},${quoteIdent(jsonbValueAlias)}.${quoteIdent(conVar.variable)}`;
     }
 
-    //TODO: ahora estamos usando en varios lados la función quoteLiteral exportada directamente del paquete pg-promise-strict, luego habría que usarla desde la app
-    // porque en el futuro la app podría quotear distinto según la DB.
     private getPkIntegrada(): string {
         return `jsonb_build_object(
           ${this.campos_pk.split(',').map(campoConAlias => Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
@@ -293,11 +289,9 @@ export class Consistencia extends ConsistenciaDB {
         this.client = client;
         this.opGen = OperativoGenerator.instanceObj;
 
-        //TODO: cuando se compile en masa sacar este fetchall a una clase Compilador que lo haga una sola vez
         try {
             this.cleanAll();
             await this.validateAndPreBuild();
-            // await this.updateDB(); //TODO: se pone acá provisoriamente hasta corregir el tema del guardado del error
             //await this.correr();
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
@@ -323,7 +317,7 @@ export class Consistencia extends ConsistenciaDB {
         this.insumosConVars = [];
     }
 
-    // TODO hacer distintos executes() ya que el procedure de BEPlus asegura que dentro del mismo coreFunction
+    // Se hacen distintos executes() ya que el procedure de BEPlus asegura que dentro del mismo coreFunction
     // todos los context.client.query.execute() van dentro de la misma transacción (transacción que se abre al iniciar el core function
     // y queda abierta hasta que termina) que rollbaquea todos los execute si algo va mal, además se espera que conectarse varias veces
     // a la DB (hacer distintos executes()) no sea un problema futuro de performance (ya sea porque node y postgres estarán en el 

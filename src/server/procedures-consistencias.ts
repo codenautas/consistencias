@@ -25,7 +25,7 @@ var procedures = [
         }
     },
     {
-        action:'consistencia/correr',
+        action:'consistencia_correr',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
@@ -38,28 +38,29 @@ var procedures = [
         }
     },
     {
-        action:'consistencias/compilar',
+        action:'consistencias_compilar',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
-            // try{
-                let operativoGenerator = new OperativoGenerator(params.operativo);
-                await operativoGenerator.fetchDataFromDB(context.client);
-                let cons = await Consistencia.fetchAll(context.client, params.operativo);
+            let operativoGenerator = new OperativoGenerator(params.operativo);
+            await operativoGenerator.fetchDataFromDB(context.client);
+            let cons = await Consistencia.fetchAll(context.client, params.operativo);
 
-                await Promise.all(cons.filter(c=>c.activa).map(async function(con){
-                    await con.compilar(context.client);
-                }));
-
-                return 'listo';
-            // }catch(e){
-            //     return 'error compilación'
-            // }
+            var cdp = Promise.resolve();
+            cons.filter(c=>c.activa).forEach(function(consistencia){
+                cdp = cdp.then(async function(){
+                    // en lugar de llamar al método compilar, llamar al procedure consistencia_compilar, contando los ok:true y ok:false
+                    await consistencia.compilar(context.client);
+                })
+            })
+            await cdp;
+            // mostrar cuantas compilaron y cuantas no
+            return {ok:true, message:'consistencias compiladas'};
         }
     },
     {
-        action:'consistencias/correr',
+        action:'consistencias_correr',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
