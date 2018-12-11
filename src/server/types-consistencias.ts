@@ -292,7 +292,6 @@ export class Consistencia extends ConsistenciaDB {
         try {
             this.cleanAll();
             await this.validateAndPreBuild();
-            //await this.correr();
         } catch (error) {
             // TODO catch solo errores de pg EP o nuestros, no de mala programación
             this.cleanAll(); //compilation fails then removes all generated data in validateAndPreBuild
