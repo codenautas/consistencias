@@ -1,13 +1,119 @@
 import { OperativoGenerator } from "varcal";
+import { Consistencia, ConVar } from "./types-consistencias";
+import { quoteLiteral, quoteIdent } from "pg-promise-strict";
 
 export class Compiler extends OperativoGenerator{
+    myCons: Consistencia[];
+    myConVars: ConVar[];
+    
 
-    consistirCaso(idCaso:string){
+    async fetchDataFromDB() {
+        await super.fetchDataFromDB();
+        this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
+        this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
+    }
 
-                    // se corre VARCAL
-                    await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, params).execute();
-                    var consistencias = await Consistencia.fetchAll(context.client, parameters.operativo);
+    async consistir(idCaso?:string, consistenciaACorrer?:Consistencia){
+    
+        //se verifica si vino idCaso
+        //TODO generalizar con mainTD y deshardcodear id_caso
+        // y cuando se generalice tener en cuenta que pueden ser mas de una pk (hoy es solo una mainTDPK)
+        let mainTDCondition = '';
+        let pkIntegradaCondition = '';
+        let updateMainTDCondition = '';
+        let idCasos: string[] = [];
+        if(idCaso){
+            idCasos = [idCaso];
+            updateMainTDCondition = `AND ${quoteIdent(Consistencia.mainTDPK)} = ${quoteLiteral(idCaso)}`;
+            mainTDCondition = `AND ${quoteIdent(Consistencia.mainTD)}.${quoteIdent(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
+            // TODO se está forzando a las últimas 3 queries a tener el alias i (para inconsistencias_ultimas sería iu)
+            pkIntegradaCondition = `AND i.pk_integrada->>'${quoteLiteral(Consistencia.mainTDPK)}'=${quoteLiteral(idCaso)}`;
+            pkIntegradaCondition = `AND i.pk_integrada->>'${quoteLiteral(Consistencia.mainTDPK)}'=${quoteLiteral(idCaso)}`;
+        } else {
+            let result = await this.client.query(`SELECT ${quoteIdent(Consistencia.mainTDPK)} from ${quoteIdent(Consistencia.mainTD)} WHERE operativo=$1`, [this.operativo]).fetchAll();
+            idCasos = result.rows.map(mainTDRow=>mainTDRow[Consistencia.mainTDPK]);
+        }
+
+        // se verifica si vino una consistencia única a correr, sino se correrán todas
+        let consistencias:Consistencia[];
+        let consistenciaCondition ='';
+        if (consistenciaACorrer){
+            consistenciaCondition = `AND consistencia=${quoteLiteral(consistenciaACorrer.consistencia)}`;
+            consistencias = [consistenciaACorrer];
+        } else {
+            consistencias = await Consistencia.fetchAll(this.client, this.operativo);
+        }
         
+        var cdpVarcal = Promise.resolve();
+        let esto = this;
+        idCasos.forEach(function(idCaso){
+            cdpVarcal = cdpVarcal.then(async function(){
+                // se corre VARCAL
+                await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+            })
+        })
+        await cdpVarcal;
 
+        // Delete all inconsistencias_ultimas
+        await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
+        
+        var cdpConsistir = Promise.resolve();
+        // se corre cada consistencia
+        consistencias.filter(c=>c.activa && c.valida).forEach(function(consistencia){
+            cdpConsistir = cdpConsistir.then(async function(){
+                let misConVars = esto.myConVars.filter((cv:ConVar)=>cv.consistencia==consistencia.consistencia);
+                // insert en inconsistencias_ultimas
+                let query= `
+                    INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores)
+                    SELECT 
+                        ${consistencia.getCompleteClausule(misConVars)}
+                        AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
+                        ${mainTDCondition}`;
+                await esto.client.query(query ,[this.operativo]).execute();
+            })
+        })
+        await cdpConsistir;
+
+        // insertar nuevas inconsistencias
+        // TODO se está forzando a las últimas 3 queries a tener el alias i (para inconsistencias_ultimas sería iu)
+        await this.client.query(`
+            INSERT INTO inconsistencias (operativo, consistencia, pk_integrada)
+              SELECT operativo, consistencia, pk_integrada
+                FROM inconsistencias_ultimas i
+                WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias)
+                  AND i.pk_integrada->>'operativo'=$1
+                  ${pkIntegradaCondition}
+        `, [this.operativo]).execute();
+        
+        // borra inconsistencias viejas
+        await this.client.query(`
+            DELETE FROM inconsistencias i
+              WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias_ultimas)
+                AND pk_integrada->>'operativo'=$1 ${pkIntegradaCondition}`, [this.operativo]).execute();
+        
+        // actualiza inconsistencias con los datos de la última corrida
+        await this.client.query(`
+        UPDATE inconsistencias i 
+          SET vigente=true, corrida=current_timestamp, incon_valores=iu.incon_valores,
+            justificacion = CASE WHEN i.incon_valores=iu.incon_valores THEN i.justificacion ELSE null END,
+            justificacion_previa = CASE WHEN i.incon_valores=iu.incon_valores THEN i.justificacion_previa ELSE i.justificacion END
+          FROM inconsistencias_ultimas iu
+          WHERE iu.operativo = i.operativo
+            AND iu.consistencia = i.consistencia
+            AND iu.pk_integrada = i.pk_integrada
+            AND i.pk_integrada->>'operativo'=$1
+            ${pkIntegradaCondition}
+        `, [this.operativo]).execute();
+
+        if(! consistenciaACorrer) {
+            // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
+            await this.client.query(`
+            UPDATE ${quoteIdent(Consistencia.mainTD)}
+            SET consistido=current_timestamp
+            WHERE operativo = $1
+            ${updateMainTDCondition}
+            `, [this.operativo]).execute();
+        }
+        return 'ok';
     }
 }

@@ -1,8 +1,10 @@
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, TablaDatos, Variable, Relacion } from 'varcal';
+import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, Relacion, TablaDatos, Variable } from 'varcal';
+import { Compiler } from "./compiler";
 
 export * from 'varcal';
+export * from './compiler';
 
 export class ConVarDB {
     operativo: string
@@ -47,6 +49,7 @@ export abstract class ConsistenciaDB {
 
 export class Consistencia extends ConsistenciaDB {
     static mainTD: string;
+    static mainTDPK: string;
     static orderedIngresoTDNames: string[];
     static orderedReferencialesTDNames: string[];
     
@@ -119,7 +122,7 @@ export class Consistencia extends ConsistenciaDB {
         let selectQuery = `
             SELECT ${this.getCompleteClausule(this.insumosConVars)}
                   AND ${quoteIdent(Consistencia.mainTD)}.operativo=${quoteLiteral(this.operativo)}
-                  AND ${quoteIdent(Consistencia.mainTD)}.id_caso='-1'`;
+                  AND ${quoteIdent(Consistencia.mainTD)}.${quoteIdent(Consistencia.mainTDPK)}='-1'`;
         var result = await this.client.query('select try_sql($1) as error_informado', [selectQuery]).fetchOneRowIfExists();
         if(result.row.error_informado){
             throw new Error(result.row.error_informado);
@@ -353,18 +356,4 @@ export class Consistencia extends ConsistenciaDB {
             throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
         }
     }
-}
-
-export class ConsistenciasGenerator extends OperativoGenerator {
-    myCons: Consistencia[]
-
-    constructor(operativo: string) {
-        super(operativo);
-    }
-
-    async fetchDataFromDB(client: Client) {
-        await super.fetchDataFromDB(client);
-        this.myCons = await Consistencia.fetchAll(client, this.operativo);
-    }
-
 }
