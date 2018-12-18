@@ -54,7 +54,7 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
     };
 }
 myOwn.clientSides.compilar = botonClientSideEnGrilla({
-    nombreBoton: 'compilar',
+    nombreBoton: 'compilar y consistir',
     llamada: function (depot: myOwn.Depot) {
         return depot.row.activa? myOwn.ajax.compilar({
             operativo: depot.row.operativo,

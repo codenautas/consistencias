@@ -49,7 +49,7 @@ export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCa
             }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
-                    // {name: "compilar_cons" , typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'}
+                    {name: "compilar_cons" , typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'}
                 );
             });
         }

@@ -1,7 +1,6 @@
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
 import { addAliasesToExpression, compilerOptions, getWrappedExpression, hasAlias, OperativoGenerator, Relacion, TablaDatos, Variable } from 'varcal';
-import { Compiler } from "./compiler";
 
 export * from 'varcal';
 export * from './compiler';

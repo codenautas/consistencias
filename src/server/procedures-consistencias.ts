@@ -15,11 +15,11 @@ var procedures = [
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             try{
-                let operativoGenerator = new OperativoGenerator(context.client, params.operativo);
-                await operativoGenerator.fetchDataFromDB();
-                let con = await Consistencia.fetchOne(context.client, params.operativo, params.consistencia);
-                await con.compilar(context.client)
-                return {ok:true, message:'consistencia compilada'};
+                let compiler = new Compiler(context.client, params.operativo);
+                await compiler.fetchDataFromDB();
+                await compiler.compileAndRun(params.consistencia);
+
+                return {ok:true, message:'consistencia compilada y consistida'};
             }catch(error){
                 return {ok:false, message:error.message};
             }
@@ -35,16 +35,20 @@ var procedures = [
             await operativoGenerator.fetchDataFromDB();
             let cons = await Consistencia.fetchAll(context.client, params.operativo);
 
+            let countFails = 0;
             var cdp = Promise.resolve();
-            cons.filter(c=>c.activa).forEach(function(consistencia){
+            let consistenciasActivas = cons.filter(c=>c.activa);
+            consistenciasActivas.forEach(function(consistencia){
                 cdp = cdp.then(async function(){
-                    // en lugar de llamar al método compilar, llamar al procedure compilar, contando los ok:true y ok:false
                     await consistencia.compilar(context.client);
-                })
+                }).catch(function(){countFails++})
             })
             await cdp;
-            // mostrar cuantas compilaron y cuantas no
-            return {ok:true, message:'consistencias compiladas'};
+            if (countFails > 0){
+                return {ok:false, message: (consistenciasActivas.length - countFails) + ' consistencias compiladas exitosamente sobre un total de ' + consistenciasActivas.length + ' activas (solo compilación, no se consistieron)'};
+            } else {
+                return {ok:true, message: 'compilaron exitosamente todas las consistencias activas:' + consistenciasActivas.length};
+            }
         }
     },
     {
@@ -108,6 +112,7 @@ var procedures = [
             let compiler = new Compiler(context.client, parameters.operativo);
             await compiler.fetchDataFromDB();
             await compiler.consistir(idCasoStr);
+            return 'listo';
         }
     }
 ];

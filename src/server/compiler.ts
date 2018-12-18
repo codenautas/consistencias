@@ -6,11 +6,23 @@ export class Compiler extends OperativoGenerator{
     myCons: Consistencia[];
     myConVars: ConVar[];
     
-
+    
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
         this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
         this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
+    }
+    
+    async compileAndRun(conName:string): Promise<void> {
+        let con = this.myCons.find(c=>c.consistencia == conName);
+        await con.compilar(this.client)            
+        await this.fetchDataFromDB(); // reload data from db // this.myConVars = con.insumosConVars
+        await this.consistir(null, con);
+    }
+
+    async compilar(con: Consistencia){
+        await con.compilar(this.client);
+        await this.consistir(null,con);
     }
 
     async consistir(idCaso?:string, consistenciaACorrer?:Consistencia){
@@ -20,15 +32,15 @@ export class Compiler extends OperativoGenerator{
         // y cuando se generalice tener en cuenta que pueden ser mas de una pk (hoy es solo una mainTDPK)
         let mainTDCondition = '';
         let pkIntegradaCondition = '';
+        let pkIntegradaConditionConAlias = '';
         let updateMainTDCondition = '';
         let idCasos: string[] = [];
         if(idCaso){
             idCasos = [idCaso];
             updateMainTDCondition = `AND ${quoteIdent(Consistencia.mainTDPK)} = ${quoteLiteral(idCaso)}`;
             mainTDCondition = `AND ${quoteIdent(Consistencia.mainTD)}.${quoteIdent(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
-            // TODO se está forzando a las últimas 3 queries a tener el alias i (para inconsistencias_ultimas sería iu)
-            pkIntegradaCondition = `AND i.pk_integrada->>'${quoteLiteral(Consistencia.mainTDPK)}'=${quoteLiteral(idCaso)}`;
-            pkIntegradaCondition = `AND i.pk_integrada->>'${quoteLiteral(Consistencia.mainTDPK)}'=${quoteLiteral(idCaso)}`;
+            pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
+            pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
         } else {
             let result = await this.client.query(`SELECT ${quoteIdent(Consistencia.mainTDPK)} from ${quoteIdent(Consistencia.mainTD)} WHERE operativo=$1`, [this.operativo]).fetchAll();
             idCasos = result.rows.map(mainTDRow=>mainTDRow[Consistencia.mainTDPK]);
@@ -44,12 +56,12 @@ export class Compiler extends OperativoGenerator{
             consistencias = await Consistencia.fetchAll(this.client, this.operativo);
         }
         
-        var cdpVarcal = Promise.resolve();
         let esto = this;
+        var cdpVarcal = Promise.resolve();
         idCasos.forEach(function(idCaso){
             cdpVarcal = cdpVarcal.then(async function(){
                 // se corre VARCAL
-                await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+                await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [esto.operativo, idCaso]).execute();
             })
         })
         await cdpVarcal;
@@ -69,7 +81,7 @@ export class Compiler extends OperativoGenerator{
                         ${consistencia.getCompleteClausule(misConVars)}
                         AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
                         ${mainTDCondition}`;
-                await esto.client.query(query ,[this.operativo]).execute();
+                await esto.client.query(query ,[esto.operativo]).execute();
             })
         })
         await cdpConsistir;
@@ -79,15 +91,15 @@ export class Compiler extends OperativoGenerator{
         await this.client.query(`
             INSERT INTO inconsistencias (operativo, consistencia, pk_integrada)
               SELECT operativo, consistencia, pk_integrada
-                FROM inconsistencias_ultimas i
+                FROM inconsistencias_ultimas 
                 WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias)
-                  AND i.pk_integrada->>'operativo'=$1
+                  AND pk_integrada->>'operativo'=$1
                   ${pkIntegradaCondition}
         `, [this.operativo]).execute();
         
         // borra inconsistencias viejas
         await this.client.query(`
-            DELETE FROM inconsistencias i
+            DELETE FROM inconsistencias
               WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias_ultimas)
                 AND pk_integrada->>'operativo'=$1 ${pkIntegradaCondition}`, [this.operativo]).execute();
         
@@ -96,13 +108,13 @@ export class Compiler extends OperativoGenerator{
         UPDATE inconsistencias i 
           SET vigente=true, corrida=current_timestamp, incon_valores=iu.incon_valores,
             justificacion = CASE WHEN i.incon_valores=iu.incon_valores THEN i.justificacion ELSE null END,
-            justificacion_previa = CASE WHEN i.incon_valores=iu.incon_valores THEN i.justificacion_previa ELSE i.justificacion END
+            justificacion_previa = CASE WHEN (i.incon_valores=iu.incon_valores OR i.justificacion is NULL) THEN i.justificacion_previa ELSE i.justificacion END
           FROM inconsistencias_ultimas iu
           WHERE iu.operativo = i.operativo
             AND iu.consistencia = i.consistencia
             AND iu.pk_integrada = i.pk_integrada
             AND i.pk_integrada->>'operativo'=$1
-            ${pkIntegradaCondition}
+            ${pkIntegradaConditionConAlias}
         `, [this.operativo]).execute();
 
         if(! consistenciaACorrer) {
