@@ -24,6 +24,9 @@ export function inconsistencias(context:TableContext):TableDefinition{
             {references:'operativos', fields:['operativo']},
             {references:'consistencias', fields:['operativo', 'consistencia']},
         ],
+        sql:{
+            where:"consistencias.activa and consistencias.valida"
+        }
         // detailTables: [
         //     { table: 'in_con_var', fields: ['operativo', 'consistencia', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
         // ]
