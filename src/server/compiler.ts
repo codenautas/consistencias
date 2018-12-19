@@ -34,18 +34,12 @@ export class Compiler extends OperativoGenerator{
         let pkIntegradaCondition = '';
         let pkIntegradaConditionConAlias = '';
         let updateMainTDCondition = '';
-        let idCasos: string[] = [];
         if(idCaso){
-            idCasos = [idCaso];
             updateMainTDCondition = `AND ${quoteIdent(Consistencia.mainTDPK)} = ${quoteLiteral(idCaso)}`;
             mainTDCondition = `AND ${quoteIdent(Consistencia.mainTD)}.${quoteIdent(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
-        } else {
-            let result = await this.client.query(`SELECT ${quoteIdent(Consistencia.mainTDPK)} from ${quoteIdent(Consistencia.mainTD)} WHERE operativo=$1`, [this.operativo]).fetchAll();
-            idCasos = result.rows.map(mainTDRow=>mainTDRow[Consistencia.mainTDPK]);
         }
-
         // se verifica si vino una consistencia única a correr, sino se correrán todas
         let consistencias:Consistencia[];
         let consistenciaCondition ='';
@@ -57,7 +51,7 @@ export class Compiler extends OperativoGenerator{
         }
         
         let esto = this;
-        if(idCasos.length==1){
+        if(idCaso){
             await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
         }else{
             await esto.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
