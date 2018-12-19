@@ -57,14 +57,11 @@ export class Compiler extends OperativoGenerator{
         }
         
         let esto = this;
-        var cdpVarcal = Promise.resolve();
-        idCasos.forEach(function(idCaso){
-            cdpVarcal = cdpVarcal.then(async function(){
-                // se corre VARCAL
-                await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [esto.operativo, idCaso]).execute();
-            })
-        })
-        await cdpVarcal;
+        if(idCasos.length==1){
+            await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+        }else{
+            await esto.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+        }
 
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
@@ -121,8 +118,8 @@ export class Compiler extends OperativoGenerator{
             // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
             await this.client.query(`
             UPDATE ${quoteIdent(Consistencia.mainTD)}
-            SET consistido=current_timestamp
-            WHERE operativo = $1
+              SET consistido=current_timestamp
+              WHERE operativo = $1
             ${updateMainTDCondition}
             `, [this.operativo]).execute();
         }
