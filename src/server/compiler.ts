@@ -1,10 +1,15 @@
 import { OperativoGenerator } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
-import { quoteLiteral, quoteIdent } from "pg-promise-strict";
+import { quoteLiteral, quoteIdent, Result } from "pg-promise-strict";
+import * as bestGlobals from "best-globals";
 
 export class Compiler extends OperativoGenerator{
     myCons: Consistencia[];
     myConVars: ConVar[];
+
+    static calculatingAllVars:boolean=false;
+    static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
+    static varCalculation: Promise<Result>;
     
     
     async fetchDataFromDB() {
@@ -15,7 +20,7 @@ export class Compiler extends OperativoGenerator{
     
     async compileAndRun(conName:string): Promise<void> {
         let con = this.myCons.find(c=>c.consistencia == conName);
-        await con.compilar(this.client)            
+        await con.compilar(this.client);
         await this.fetchDataFromDB(); // reload data from db // this.myConVars = con.insumosConVars
         await this.consistir(null, con);
     }
@@ -50,16 +55,12 @@ export class Compiler extends OperativoGenerator{
             consistencias = await Consistencia.fetchAll(this.client, this.operativo);
         }
         
-        let esto = this;
-        if(idCaso){
-            await esto.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
-        }else{
-            await esto.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
-        }
-
+        await this.calculateVars(idCaso);
+        
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
         
+        let esto = this;
         var cdpConsistir = Promise.resolve();
         // se corre cada consistencia
         consistencias.filter(c=>c.activa && c.valida).forEach(function(consistencia){
@@ -118,5 +119,23 @@ export class Compiler extends OperativoGenerator{
             `, [this.operativo]).execute();
         }
         return 'ok';
+    }
+    
+    private async calculateVars(idCaso: string|undefined): Promise<void> {
+        if(idCaso){
+            await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+        }else{
+            //semaphore
+            var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
+            if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
+                Compiler.calculatingAllVars = true;
+                Compiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+                await Compiler.varCalculation;
+                Compiler.calculatingAllVars = false;
+                Compiler.lastCalculateAllVars = now;
+            } else {
+                await Compiler.varCalculation;
+            }
+        }
     }
 }

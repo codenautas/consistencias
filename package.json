@@ -17,6 +17,7 @@
     "url": "git+https://github.com/codenautas/consistencias.git"
   },
   "dependencies": {
+    "best-globals": "~0.10.7",
     "varcal": "~0.4.2"
   },
   "devDependencies": {

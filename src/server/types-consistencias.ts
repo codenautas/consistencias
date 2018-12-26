@@ -163,7 +163,7 @@ export class Consistencia extends ConsistenciaDB {
     salvarFuncionInformado() {
         //TODO: sacar esto de acá
         var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
-        function regexFunc(x: string, centro: string) {
+        function regexFunc(_x: string, centro: string) {
             return 'informado(' + centro + ')';
         }
         this.clausula_where = this.clausula_where.replace(regex, regexFunc);
