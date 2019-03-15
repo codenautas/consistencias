@@ -107,11 +107,10 @@ var procedures = [
         ],
         coreFunction:async function(context:ProcedureContext, parameters:any){
             // consistir_encuesta = correr todas las consistencias para dicha encuesta
-            let idCasoStr = parameters.id_caso.toString();
             
             let compiler = new Compiler(context.client, parameters.operativo);
             await compiler.fetchDataFromDB();
-            await compiler.consistir(idCasoStr);
+            await compiler.consistir(parameters.id_caso);
             return 'listo';
         }
     }
