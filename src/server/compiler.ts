@@ -9,6 +9,7 @@ export class Compiler extends OperativoGenerator{
 
     static calculatingAllVars:boolean=false;
     static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
+    //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
     static varCalculation: Promise<Result>;
     
     
@@ -126,6 +127,7 @@ export class Compiler extends OperativoGenerator{
             await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
         }else{
             //semaphore
+            //var now = bestGlobals.datetime.now();
             var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
             if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
                 Compiler.calculatingAllVars = true;
