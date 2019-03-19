@@ -1,7 +1,7 @@
 "use strict";
 
 import { OperativoGenerator, ProcedureContext } from "operativos";
-import { Compiler } from "./compiler";
+import { ConCompiler } from "./compiler";
 import { Consistencia } from "./types-consistencias";
 
 type ConsistenciasPk = {operativo: string, consistencia: string}
@@ -15,7 +15,7 @@ var procedures = [
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             try{
-                let compiler = new Compiler(context.client, params.operativo);
+                let compiler = new ConCompiler(context.client, params.operativo);
                 await compiler.fetchDataFromDB();
                 await compiler.compileAndRun(params.consistencia);
 
@@ -60,7 +60,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             // correr una consistencia = consistir todos los casos en dicha consistencia
             
-            let compiler = new Compiler(context.client, params.operativo);
+            let compiler = new ConCompiler(context.client, params.operativo);
             await compiler.fetchDataFromDB();
             let consistencia = compiler.myCons.find(c=>c.operativo==params.operativo && c.consistencia==params.consistencia);
 
@@ -108,7 +108,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, parameters:any){
             // consistir_encuesta = correr todas las consistencias para dicha encuesta
             
-            let compiler = new Compiler(context.client, parameters.operativo);
+            let compiler = new ConCompiler(context.client, parameters.operativo);
             await compiler.fetchDataFromDB();
             await compiler.consistir(parameters.id_caso);
             return 'listo';

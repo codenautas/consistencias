@@ -1,9 +1,12 @@
-import { OperativoGenerator } from "varcal";
-import { Consistencia, ConVar } from "./types-consistencias";
-import { quoteLiteral, quoteIdent, Result } from "pg-promise-strict";
 import * as bestGlobals from "best-globals";
+import { quoteIdent, quoteLiteral, Result } from "pg-promise-strict";
+import { VarCalculator, getWrappedExpression, compilerOptions, Variable, Relacion } from "varcal";
+import { Consistencia, ConVar } from "./types-consistencias";
+import { TablaDatos } from "varcal";
+import * as EP from "expre-parser";
 
-export class Compiler extends OperativoGenerator{
+export class ConCompiler extends VarCalculator{
+    
     myCons: Consistencia[];
     myConVars: ConVar[];
 
@@ -11,28 +14,112 @@ export class Compiler extends OperativoGenerator{
     static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
     static varCalculation: Promise<Result>;
-    
-    
+    lastTD: TablaDatos;
+
+    validVars: Variable[];
+    optionalRelations: Relacion[];
+   
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
         this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
         this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
+
+        // put in constructor 
+        this.validVars = this.myVars.filter(v => ConCompiler.validTDNames().indexOf(v.tabla_datos) > -1);
+        this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
+
+    }
+      
+    static mainTD: string;
+    static mainTDPK: string;
+    static orderedIngresoTDNames: string[];
+    static orderedReferencialesTDNames: string[];
+      
+    getCompleteQuery(con: Consistencia): string {
+        return `${con.getCompleteQuery(con.insumosConVars)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
     }
     
+    static validTDNames(): any {
+        return ConCompiler.orderedIngresoTDNames.concat(ConCompiler.orderedReferencialesTDNames);
+    }
+    
+    buildClausulaWhere(con:Consistencia):string {
+        // this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        // this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        // this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
+        // this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
+        // this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
+
+        let sanitizedExp = getWrappedExpression(con.getMixConditions(), this.lastTD.getQuotedPKsCSV(), compilerOptions);
+        sanitizedExp = this.addAliasesToExpression(sanitizedExp, EP.parse(sanitizedExp).getInsumos(), this.myVars, this.myTDs);
+        let clausula_where = `WHERE ${sanitizedExp} IS NOT TRUE`;
+        clausula_where = this.salvarFuncionInformado(clausula_where);
+        return clausula_where
+    }
+
+    salvarFuncionInformado(clausula_where:string) {
+        //TODO: sacar esto de acá
+        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
+        function regexFunc(_x: string, centro: string) {
+            return 'informado(' + centro + ')';
+        }
+        clausula_where = clausula_where.replace(regex, regexFunc);
+
+        // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
+        return clausula_where;
+    }
+
+    getLastTDPKsWithAlias(): string {
+      
+      return this.lastTD.getPKsWitAlias().join(',');
+    }
+    
+    buildClausulaFrom(con: Consistencia): string {
+
+        //put in constructor
+        // TODO: ORDENAR dinamicamente:
+        // primero: la td que no tenga ninguna TD en que busco es la principal
+        // segundas: van todas las tds que tengan en "que_busco" a la principal
+        // terceras: las tds que tengan en "que busco" a las segundas
+        // provisoriamente se ordena fijando un arreglo ordenado
+        // TODO: deshardcodear main TD
+        let insumosAliases: string[] = con.getInsumosAliases(); //aliases involved in this consistence expresion
+        let orderedInsumosIngresoTDNames: string[] = ConCompiler.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        let orderedInsumosReferencialesTDNames: string[] = ConCompiler.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        
+        let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
+        let NOTOrderedInsumosOptionalRelations: Relacion[] = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
+        
+        this.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
+
+        let firstTD = this.getUniqueTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+        let clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
+        for (let i = 1; i < orderedInsumosTDNames.length; i++) {
+            let leftInsumoAlias = orderedInsumosTDNames[i - 1];
+            let rightInsumoAlias = orderedInsumosTDNames[i];
+            clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
+        }
+        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
+        NOTOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
+        
+        return clausula_from;
+    }
+
     async compileAndRun(conName:string): Promise<void> {
         let con = this.myCons.find(c=>c.consistencia == conName);
-        await con.compilar(this.client);
+        await con.compilar(this);
         await this.fetchDataFromDB(); // reload data from db // this.myConVars = con.insumosConVars
         await this.consistir(null, con);
     }
 
-    async compilar(con: Consistencia){
-        await con.compilar(this.client);
-        await this.consistir(null,con);
-    }
+    // async compilar(con: Consistencia){
+    //     await con.compilar(this.client);
+    //     await this.consistir(null,con);
+    // }
 
     async consistir(idCaso?:string, consistenciaACorrer?:Consistencia){
-    
         //se verifica si vino idCaso
         //TODO generalizar con mainTD y deshardcodear id_caso
         // y cuando se generalice tener en cuenta que pueden ser mas de una pk (hoy es solo una mainTDPK)
@@ -41,10 +128,10 @@ export class Compiler extends OperativoGenerator{
         let pkIntegradaConditionConAlias = '';
         let updateMainTDCondition = '';
         if(idCaso){
-            updateMainTDCondition = `AND ${quoteIdent(Consistencia.mainTDPK)} = ${quoteLiteral(idCaso)}`;
-            mainTDCondition = `AND ${quoteIdent(Consistencia.mainTD)}.${quoteIdent(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
-            pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
-            pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(Consistencia.mainTDPK)}=${quoteLiteral(idCaso)}`;
+            updateMainTDCondition = `AND ${quoteIdent(ConCompiler.mainTDPK)} = ${quoteLiteral(idCaso)}`;
+            mainTDCondition = `AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
+            pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
+            pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
         }
         // se verifica si vino una consistencia única a correr, sino se correrán todas
         let consistencias:Consistencia[];
@@ -70,9 +157,8 @@ export class Compiler extends OperativoGenerator{
                 // insert en inconsistencias_ultimas
                 let query= `
                     INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores)
-                    SELECT 
-                        ${consistencia.getCompleteClausule(misConVars)}
-                        AND ${quoteIdent(Consistencia.mainTD)}.operativo=$1
+                      ${consistencia.getCompleteQuery(misConVars)}
+                        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=$1
                         ${mainTDCondition}`;
                 await esto.client.query(query ,[esto.operativo]).execute();
             })
@@ -113,7 +199,7 @@ export class Compiler extends OperativoGenerator{
         if(! consistenciaACorrer) {
             // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
             await this.client.query(`
-            UPDATE ${quoteIdent(Consistencia.mainTD)}
+            UPDATE ${quoteIdent(ConCompiler.mainTD)}
               SET consistido=current_timestamp
               WHERE operativo = $1
             ${updateMainTDCondition}
@@ -122,22 +208,23 @@ export class Compiler extends OperativoGenerator{
         return 'ok';
     }
     
-    private async calculateVars(idCaso: string|undefined): Promise<void> {
-        if(idCaso){
-            await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
-        }else{
-            //semaphore
-            //var now = bestGlobals.datetime.now();
-            var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
-            if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
-                Compiler.calculatingAllVars = true;
-                Compiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
-                await Compiler.varCalculation;
-                Compiler.calculatingAllVars = false;
-                Compiler.lastCalculateAllVars = now;
-            } else {
-                await Compiler.varCalculation;
-            }
-        }
-    }
+    // TODO: comento para que falle y revisar las referencias a varcal_provisorio
+    // private async calculateVars(idCaso: string|undefined): Promise<void> {
+    //     if(idCaso){
+    //         await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+    //     }else{
+    //         //semaphore
+    //         //var now = bestGlobals.datetime.now();
+    //         var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
+    //         if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
+    //             Compiler.calculatingAllVars = true;
+    //             Compiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+    //             await Compiler.varCalculation;
+    //             Compiler.calculatingAllVars = false;
+    //             Compiler.lastCalculateAllVars = now;
+    //         } else {
+    //             await Compiler.varCalculation;
+    //         }
+    //     }
+    // }
 }
