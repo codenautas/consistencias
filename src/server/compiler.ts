@@ -1,9 +1,8 @@
 import * as bestGlobals from "best-globals";
-import { quoteIdent, quoteLiteral, Result } from "pg-promise-strict";
-import { VarCalculator, getWrappedExpression, compilerOptions, Variable, Relacion } from "varcal";
-import { Consistencia, ConVar } from "./types-consistencias";
-import { TablaDatos } from "varcal";
 import * as EP from "expre-parser";
+import { quoteIdent, quoteLiteral } from "pg-promise-strict";
+import { compilerOptions, getWrappedExpression, hasAlias, Relacion, VarCalculator, Variable } from "varcal";
+import { Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends VarCalculator{
     
@@ -13,46 +12,130 @@ export class ConCompiler extends VarCalculator{
     static calculatingAllVars:boolean=false;
     static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
-    static varCalculation: Promise<Result>;
-    lastTD: TablaDatos;
-
-    validVars: Variable[];
-    optionalRelations: Relacion[];
    
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
         this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
         this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
-
-        // put in constructor 
-        this.validVars = this.myVars.filter(v => ConCompiler.validTDNames().indexOf(v.tabla_datos) > -1);
+        
+        // put in Varcal
         this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
-
     }
-      
+    
+    // PARA SUBIR A OPERATIVOS
     static mainTD: string;
     static mainTDPK: string;
     static orderedIngresoTDNames: string[];
     static orderedReferencialesTDNames: string[];
-      
-    getCompleteQuery(con: Consistencia): string {
-        return `${con.getCompleteQuery(con.insumosConVars)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
-    }
-    
-    static validTDNames(): any {
+
+    static orderedTDNames(): any {
         return ConCompiler.orderedIngresoTDNames.concat(ConCompiler.orderedReferencialesTDNames);
     }
+
+    // FIN PARA SUBIR A OPERATIVOS
+    /////////////////////////
+    // PARA SUBIR VARCAL
+
+    optionalRelations: Relacion[];
     
-    buildClausulaWhere(con:Consistencia):string {
+    private validateAliases(aliases: string[]): any {
+        let validAliases=this.getValidAliases();
+        aliases.forEach(alias=>{
+            if (validAliases.indexOf(alias) == -1) {
+                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + validAliases.join(', '));
+            }
+        });
+    }
+    private getValidAliases(): string[]{
+        let validRelationsNames = this.optionalRelations.map(rel=>rel.que_busco)
+        return this.myTDs.map(td=>td.tabla_datos).concat(validRelationsNames);
+    }
+    private validateFunctions(funcNames: string[]) {
+        let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
+        let comunSquemaWhiteList = ['informado'];
+        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
+        funcNames.forEach(f => {
+            if (hasAlias(f)) {
+                if (f.split('.')[0] != 'dbo') {
+                    throw new Error('La Función ' + f + ' contiene un alias inválido');
+                }
+            } else {
+                if (functionWhiteList.indexOf(f) == -1) {
+                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
+                }
+            }
+        })
+    }
+
+    validateCondInsumos(insumos:EP.Insumos): void {    
+        this.validateFunctions(insumos.funciones);
+        this.validateAliases(insumos.aliases);
+    }
+
+    private findValidVar(varName: string):{varFound:Variable,relation?:string} {
+        let rawVarName = varName;
+        let varsFound:Variable[] = this.myVars;
+        let relation:string;
+        if (hasAlias(varName)) {
+            let varAlias = varName.split('.')[0];
+            rawVarName = varName.split('.')[1];
+
+            let relAlias = this.optionalRelations.find(rel => rel.que_busco == varAlias)
+            if (relAlias){
+                relation=varAlias;
+                varAlias=relAlias.tabla_busqueda;
+            }
+
+            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
+        }
+        varsFound = varsFound.filter(v => v.variable == rawVarName);
+        this.VarsFoundErrorChecks(varsFound, varName);
+        return {varFound:varsFound[0], relation};
+    }
+
+    private VarsFoundErrorChecks(varsFound:Variable[], varName: string){
+        if (varsFound.length > 1) {
+            throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
+        }
+        if (varsFound.length <= 0) {
+            throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
+        }
+        if (!varsFound[0].activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
+    }
+    private addMainTD(insumosAliases: string[]) {
+        //aliases involved in this consistence expresion
+        if (insumosAliases.indexOf(ConCompiler.mainTD) == -1) {
+            insumosAliases.push(ConCompiler.mainTD);
+        }
+        return insumosAliases;
+    }
+
+    private filterOrderedTDs(ec:ExpressionContainer) {
+        //put in constructor
+        // TODO: ORDENAR dinamicamente:
+        // primero: la td que no tenga ninguna TD en que busco es la principal
+        // segundas: van todas las tds que tengan en "que_busco" a la principal
+        // terceras: las tds que tengan en "que busco" a las segundas
+        // provisoriamente se ordena fijando un arreglo ordenado
+        // TODO: deshardcodear main TD
+        
+        let insumosAliases = this.addMainTD(ec.getInsumosAliases());
+        ec.notOrderedInsumosOptionalRelations = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
+        let orderedInsumosIngresoTDNames:string[] = ConCompiler.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        let orderedInsumosReferencialesTDNames:string[]= ConCompiler.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
+        ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
+        ec.firstTD = this.getUniqueTD(ConCompiler.mainTD);
+    }
+
+    buildClausulaWhere(ec:ExpressionContainer):string {
         // this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
         // this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
         // this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         // this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
         // this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
 
-        let sanitizedExp = getWrappedExpression(con.getMixConditions(), this.lastTD.getQuotedPKsCSV(), compilerOptions);
+        let sanitizedExp = getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
         sanitizedExp = this.addAliasesToExpression(sanitizedExp, EP.parse(sanitizedExp).getInsumos(), this.myVars, this.myTDs);
         let clausula_where = `WHERE ${sanitizedExp} IS NOT TRUE`;
         clausula_where = this.salvarFuncionInformado(clausula_where);
@@ -70,46 +153,102 @@ export class ConCompiler extends VarCalculator{
         // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
         return clausula_where;
     }
-
-    getLastTDPKsWithAlias(): string {
-      
-      return this.lastTD.getPKsWitAlias().join(',');
-    }
-    
-    buildClausulaFrom(con: Consistencia): string {
-
-        //put in constructor
-        // TODO: ORDENAR dinamicamente:
-        // primero: la td que no tenga ninguna TD en que busco es la principal
-        // segundas: van todas las tds que tengan en "que_busco" a la principal
-        // terceras: las tds que tengan en "que busco" a las segundas
-        // provisoriamente se ordena fijando un arreglo ordenado
-        // TODO: deshardcodear main TD
-        let insumosAliases: string[] = con.getInsumosAliases(); //aliases involved in this consistence expresion
-        let orderedInsumosIngresoTDNames: string[] = ConCompiler.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
-        let orderedInsumosReferencialesTDNames: string[] = ConCompiler.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
-        
-        let orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
-        let NOTOrderedInsumosOptionalRelations: Relacion[] = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
-        
-        this.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]); //tabla mas específicas (hija)
-
-        let firstTD = this.getUniqueTD(orderedInsumosTDNames[0]); //tabla mas general (padre)
+    buildClausulaFrom(ec:ExpressionContainer): string {
+        let firstTD = this.getUniqueTD(ec.orderedInsumosTDNames[0]); //tabla mas general (padre)
         let clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
-        for (let i = 1; i < orderedInsumosTDNames.length; i++) {
-            let leftInsumoAlias = orderedInsumosTDNames[i - 1];
-            let rightInsumoAlias = orderedInsumosTDNames[i];
+        for (let i = 1; i < ec.orderedInsumosTDNames.length; i++) {
+            let leftInsumoAlias = ec.orderedInsumosTDNames[i - 1];
+            let rightInsumoAlias = ec.orderedInsumosTDNames[i];
             clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
         }
         //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
-        NOTOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
+        ec.notOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
         
         return clausula_from;
     }
 
+    // FIN PARA SUBIR VARCAL 
+
+    validateCondInsumosReloadedMethod(con:Consistencia): void {    
+        // call super
+        this.validateCondInsumos(con.insumos)
+        con.insumosConVars.push(...this.validateVarsAndBuildConVar(con.insumos.variables));
+    }
+
+    private validateVarsAndBuildConVar(varNames: string[]): ConVar[]{
+        let insumosConVars: ConVar[]
+        // chequear que todas las variables de la cond existan en alguna tabla (sino se llena el campo error_compilacion)
+        varNames.forEach(varName => {
+            let {varFound, relation} = this.findValidVar(varName);
+            insumosConVars.push(ConVar.buildFrom(varFound, relation));
+        });
+        return insumosConVars
+    }
+
+    //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
+    private buildSQLExpression(con:Consistencia) {
+        // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
+        // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
+        // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
+        con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
+        con.clausula_from = this.buildClausulaFrom(con);
+        con.clausula_where = this.buildClausulaWhere(con);
+    }
+
+    /**
+     * El proceso de compilar una consistencia consiste en:
+     * 1) valida la expresión de la consistencia 
+     *  a. Chequea que la expresión sea un SQL válido
+     *  b. Chequea insumos (variables y funciones) válidos y correctos 
+     * 2) Construye el SQL (que se usará para correr la consistencia)
+     * 3) Chequea el SQL generado ejecutandolo con un select
+     * 4) Si todo salió bien guarda los SQL generados y marca consistencia como válida, sino
+     *  tira error informando el motivo
+     * 
+     * Los SQL generados de una consistencia serán usados luego para correr la consistencia
+     */
+    async compile(con:Consistencia) {
+        try {
+            this.preCompile(con);
+            this.buildSQLExpression(con);
+            await this.testBuiltSQL(con);
+            con.markAsValid();
+        } catch (error) {
+            con.compilationFails(error);
+        }
+        finally {
+            await con.updateDB(this.client);
+        }
+    }
+    preCompile(con: Consistencia): any {
+        con.prepare()
+        this.validateCondInsumosReloadedMethod(con);
+        this.filterOrderedTDs(con); //tabla mas específicas (hija)
+    }
+
+    private async testBuiltSQL(con:Consistencia) {
+        // TODO: deshardcodear id_caso de todos lados y operativo también! Pero pidió Emilio que se haga después 
+        let selectQuery = this.getCompleteQuery(con);
+        var result = await this.client.query('select try_sql($1) as error_informado', [selectQuery]).fetchOneRowIfExists();
+        if(result.row.error_informado){
+            throw new Error(result.row.error_informado);
+        }
+    }
+
+    getCompleteQuery(con: Consistencia): string {
+        return `${con.getCompleteQuery(con.insumosConVars)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
+    }
+    
+
+
+
+
+
     async compileAndRun(conName:string): Promise<void> {
         let con = this.myCons.find(c=>c.consistencia == conName);
-        await con.compilar(this);
+        await this.compile(con);
         await this.fetchDataFromDB(); // reload data from db // this.myConVars = con.insumosConVars
         await this.consistir(null, con);
     }
@@ -218,12 +357,12 @@ export class ConCompiler extends VarCalculator{
     //         var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
     //         if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
     //             Compiler.calculatingAllVars = true;
-    //             Compiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
-    //             await Compiler.varCalculation;
+    //             let varCalculationResult = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+    //             await varCalculationResult;
     //             Compiler.calculatingAllVars = false;
     //             Compiler.lastCalculateAllVars = now;
     //         } else {
-    //             await Compiler.varCalculation;
+    //             await varCalculationResult;
     //         }
     //     }
     // }

@@ -3,6 +3,7 @@
 import { OperativoGenerator, ProcedureContext } from "operativos";
 import { ConCompiler } from "./compiler";
 import { Consistencia } from "./types-consistencias";
+import { AppConsistenciasType } from "./app-consistencias";
 
 type ConsistenciasPk = {operativo: string, consistencia: string}
 
@@ -15,7 +16,7 @@ var procedures = [
         ],
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             try{
-                let compiler = new ConCompiler(context.client, params.operativo);
+                let compiler = new ConCompiler(context.be as AppConsistenciasType, context.client, params.operativo);
                 await compiler.fetchDataFromDB();
                 await compiler.compileAndRun(params.consistencia);
 
@@ -31,8 +32,8 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
         coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
-            let operativoGenerator = new OperativoGenerator(context.client, params.operativo);
-            await operativoGenerator.fetchDataFromDB();
+            let compiler = new ConCompiler(context.be as AppConsistenciasType, context.client, params.operativo);
+            await compiler.fetchDataFromDB();
             let cons = await Consistencia.fetchAll(context.client, params.operativo);
 
             let countFails = 0;
@@ -40,7 +41,7 @@ var procedures = [
             let consistenciasActivas = cons.filter(c=>c.activa);
             consistenciasActivas.forEach(function(consistencia){
                 cdp = cdp.then(async function(){
-                    await consistencia.compilar(context.client);
+                    await compiler.compile(consistencia);
                 }).catch(function(){countFails++})
             })
             await cdp;
@@ -60,7 +61,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
             // correr una consistencia = consistir todos los casos en dicha consistencia
             
-            let compiler = new ConCompiler(context.client, params.operativo);
+            let compiler = new ConCompiler(context.be as AppConsistenciasType, context.client, params.operativo);
             await compiler.fetchDataFromDB();
             let consistencia = compiler.myCons.find(c=>c.operativo==params.operativo && c.consistencia==params.consistencia);
 
@@ -108,7 +109,7 @@ var procedures = [
         coreFunction:async function(context:ProcedureContext, parameters:any){
             // consistir_encuesta = correr todas las consistencias para dicha encuesta
             
-            let compiler = new ConCompiler(context.client, parameters.operativo);
+            let compiler = new ConCompiler(context.be as AppConsistenciasType, context.client, params.operativo);
             await compiler.fetchDataFromDB();
             await compiler.consistir(parameters.id_caso);
             return 'listo';

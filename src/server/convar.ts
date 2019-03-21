@@ -1,4 +1,5 @@
 import { Client } from 'pg-promise-strict';
+import { Variable } from 'varcal';
 
 export class ConVarDB {
     operativo: string
@@ -11,6 +12,12 @@ export class ConVarDB {
 }
 
 export class ConVar extends ConVarDB {
+    static buildFrom(varFound: Variable, relation?: string): any {
+        let cv = new ConVar()
+        Object.assign(cv, <ConVar>{operativo: varFound.operativo, tabla_datos: varFound.tabla_datos, variable:varFound.variable, texto:varFound.nombre });
+        cv.relacion = relation;
+        return cv
+    }
     buildExpresionVar(): string {
         return this.relacion? this.relacion + '.' + this.variable : this.variable;
     }
