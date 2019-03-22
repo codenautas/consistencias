@@ -21,7 +21,7 @@ export class ConCompiler extends VarCalculator{
         this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
     }
 
-    validatedInsumos(con:Consistencia): void {    
+    validateInsumos(con:Consistencia): void {    
         // call super
         super.validateInsumos(con.insumos)
         con.insumosConVars.push(...this.validateVarsAndBuildConVar(con.insumos.variables));
@@ -86,11 +86,7 @@ export class ConCompiler extends VarCalculator{
             await con.updateDB(this.client);
         }
     }
-    preCompile(con: Consistencia): any {
-        con.prepare()
-        this.validatedInsumos(con);
-        this.filterOrderedTDs(con); //tabla mas específicas (hija)
-    }
+
 
     private async testBuiltSQL(con:Consistencia) {
         // TODO: deshardcodear id_caso de todos lados y operativo también! Pero pidió Emilio que se haga después 
