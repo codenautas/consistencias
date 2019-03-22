@@ -1,7 +1,6 @@
 import * as bestGlobals from "best-globals";
-import * as EP from "expre-parser";
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
-import { compilerOptions, getWrappedExpression, hasAlias, Relacion, VarCalculator, Variable } from "varcal";
+import { VarCalculator } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends VarCalculator{
@@ -21,157 +20,10 @@ export class ConCompiler extends VarCalculator{
         // put in Varcal
         this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
     }
-    
-    // PARA SUBIR A OPERATIVOS
-    static mainTD: string;
-    static mainTDPK: string;
-    static orderedIngresoTDNames: string[];
-    static orderedReferencialesTDNames: string[];
 
-    static orderedTDNames(): any {
-        return ConCompiler.orderedIngresoTDNames.concat(ConCompiler.orderedReferencialesTDNames);
-    }
-
-    // FIN PARA SUBIR A OPERATIVOS
-    /////////////////////////
-    // PARA SUBIR VARCAL
-
-    optionalRelations: Relacion[];
-    
-    private validateAliases(aliases: string[]): any {
-        let validAliases=this.getValidAliases();
-        aliases.forEach(alias=>{
-            if (validAliases.indexOf(alias) == -1) {
-                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + validAliases.join(', '));
-            }
-        });
-    }
-    private getValidAliases(): string[]{
-        let validRelationsNames = this.optionalRelations.map(rel=>rel.que_busco)
-        return this.myTDs.map(td=>td.tabla_datos).concat(validRelationsNames);
-    }
-    private validateFunctions(funcNames: string[]) {
-        let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
-        let comunSquemaWhiteList = ['informado'];
-        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
-        funcNames.forEach(f => {
-            if (hasAlias(f)) {
-                if (f.split('.')[0] != 'dbo') {
-                    throw new Error('La Función ' + f + ' contiene un alias inválido');
-                }
-            } else {
-                if (functionWhiteList.indexOf(f) == -1) {
-                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
-                }
-            }
-        })
-    }
-
-    validateCondInsumos(insumos:EP.Insumos): void {    
-        this.validateFunctions(insumos.funciones);
-        this.validateAliases(insumos.aliases);
-    }
-
-    private findValidVar(varName: string):{varFound:Variable,relation?:string} {
-        let rawVarName = varName;
-        let varsFound:Variable[] = this.myVars;
-        let relation:string;
-        if (hasAlias(varName)) {
-            let varAlias = varName.split('.')[0];
-            rawVarName = varName.split('.')[1];
-
-            let relAlias = this.optionalRelations.find(rel => rel.que_busco == varAlias)
-            if (relAlias){
-                relation=varAlias;
-                varAlias=relAlias.tabla_busqueda;
-            }
-
-            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
-        }
-        varsFound = varsFound.filter(v => v.variable == rawVarName);
-        this.VarsFoundErrorChecks(varsFound, varName);
-        return {varFound:varsFound[0], relation};
-    }
-
-    private VarsFoundErrorChecks(varsFound:Variable[], varName: string){
-        if (varsFound.length > 1) {
-            throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
-        }
-        if (varsFound.length <= 0) {
-            throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
-        }
-        if (!varsFound[0].activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
-    }
-    private addMainTD(insumosAliases: string[]) {
-        //aliases involved in this consistence expresion
-        if (insumosAliases.indexOf(ConCompiler.mainTD) == -1) {
-            insumosAliases.push(ConCompiler.mainTD);
-        }
-        return insumosAliases;
-    }
-
-    private filterOrderedTDs(ec:ExpressionContainer) {
-        //put in constructor
-        // TODO: ORDENAR dinamicamente:
-        // primero: la td que no tenga ninguna TD en que busco es la principal
-        // segundas: van todas las tds que tengan en "que_busco" a la principal
-        // terceras: las tds que tengan en "que busco" a las segundas
-        // provisoriamente se ordena fijando un arreglo ordenado
-        // TODO: deshardcodear main TD
-        
-        let insumosAliases = this.addMainTD(ec.getInsumosAliases());
-        ec.notOrderedInsumosOptionalRelations = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
-        let orderedInsumosIngresoTDNames:string[] = ConCompiler.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
-        let orderedInsumosReferencialesTDNames:string[]= ConCompiler.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
-        ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
-        ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
-        ec.firstTD = this.getUniqueTD(ConCompiler.mainTD);
-    }
-
-    buildClausulaWhere(ec:ExpressionContainer):string {
-        // this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
-        // this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
-        // this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
-        // this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
-        // this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
-
-        let sanitizedExp = getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
-        sanitizedExp = this.addAliasesToExpression(sanitizedExp, EP.parse(sanitizedExp).getInsumos(), this.myVars, this.myTDs);
-        let clausula_where = `WHERE ${sanitizedExp} IS NOT TRUE`;
-        clausula_where = this.salvarFuncionInformado(clausula_where);
-        return clausula_where
-    }
-
-    salvarFuncionInformado(clausula_where:string) {
-        //TODO: sacar esto de acá
-        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
-        function regexFunc(_x: string, centro: string) {
-            return 'informado(' + centro + ')';
-        }
-        clausula_where = clausula_where.replace(regex, regexFunc);
-
-        // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
-        return clausula_where;
-    }
-    buildClausulaFrom(ec:ExpressionContainer): string {
-        let firstTD = this.getUniqueTD(ec.orderedInsumosTDNames[0]); //tabla mas general (padre)
-        let clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
-        for (let i = 1; i < ec.orderedInsumosTDNames.length; i++) {
-            let leftInsumoAlias = ec.orderedInsumosTDNames[i - 1];
-            let rightInsumoAlias = ec.orderedInsumosTDNames[i];
-            clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
-        }
-        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
-        ec.notOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
-        
-        return clausula_from;
-    }
-
-    // FIN PARA SUBIR VARCAL 
-
-    validateCondInsumosReloadedMethod(con:Consistencia): void {    
+    validatedInsumos(con:Consistencia): void {    
         // call super
-        this.validateCondInsumos(con.insumos)
+        super.validateInsumos(con.insumos)
         con.insumosConVars.push(...this.validateVarsAndBuildConVar(con.insumos.variables));
     }
 
@@ -193,6 +45,19 @@ export class ConCompiler extends VarCalculator{
         con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
         con.clausula_from = this.buildClausulaFrom(con);
         con.clausula_where = this.buildClausulaWhere(con);
+        this.salvarFuncionInformado(con.clausula_where);
+    }
+
+    private salvarFuncionInformado(clausula_where:string) {
+        //TODO: sacar esto de acá
+        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
+        function regexFunc(_x: string, centro: string) {
+            return 'informado(' + centro + ')';
+        }
+        clausula_where = clausula_where.replace(regex, regexFunc);
+
+        // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
+        return clausula_where;
     }
 
     /**
@@ -222,7 +87,7 @@ export class ConCompiler extends VarCalculator{
     }
     preCompile(con: Consistencia): any {
         con.prepare()
-        this.validateCondInsumosReloadedMethod(con);
+        this.validatedInsumos(con);
         this.filterOrderedTDs(con); //tabla mas específicas (hija)
     }
 

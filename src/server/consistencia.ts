@@ -1,5 +1,5 @@
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { OperativoGenerator} from "varcal";
+import { OperativoGenerator, ExpressionContainer} from "varcal";
 import { ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
