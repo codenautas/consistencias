@@ -1,5 +1,6 @@
+import { Insumos } from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { OperativoGenerator, ExpressionContainer} from "varcal";
+import { ExpressionContainer, OperativoGenerator, Relacion, TablaDatos } from "varcal";
 import { ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
@@ -23,7 +24,7 @@ export interface ConsistenciaDB {
     compilada?: Date
 }
 
-export class Consistencia extends ExpressionContainer implements ConsistenciaDB{
+export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     operativo: string
     consistencia: string
     precondicion?: string
@@ -42,6 +43,21 @@ export class Consistencia extends ExpressionContainer implements ConsistenciaDB{
     compilada?: Date
 
     insumosConVars:ConVar[];
+
+    //elegir uno
+    expresionValidada: string
+    rawExpression: string
+
+    insumos: Insumos; 
+    
+    orderedInsumosTDNames: string[]
+    notOrderedInsumosOptionalRelations: Relacion[] 
+    lastTD:TablaDatos
+    firstTD:TablaDatos
+
+    clausula_from:string
+    clausula_where:string
+
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();

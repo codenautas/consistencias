@@ -87,7 +87,6 @@ export class ConCompiler extends VarCalculator{
         }
     }
 
-
     private async testBuiltSQL(con:Consistencia) {
         // TODO: deshardcodear id_caso de todos lados y operativo también! Pero pidió Emilio que se haga después 
         let selectQuery = this.getCompleteQuery(con);
