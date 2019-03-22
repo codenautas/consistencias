@@ -1,9 +1,9 @@
 "use strict";
 
-import { OperativoGenerator, ProcedureContext } from "operativos";
-import { ConCompiler } from "./compiler";
-import { Consistencia } from "./types-consistencias";
+import { ProcedureContext } from "operativos";
 import { AppConsistenciasType } from "./app-consistencias";
+import { ConCompiler } from "./con-compiler";
+import { Consistencia } from "./types-consistencias";
 
 type ConsistenciasPk = {operativo: string, consistencia: string}
 

@@ -28,6 +28,7 @@ export class ConCompiler extends VarCalculator{
     }
 
     private validateVarsAndBuildConVar(varNames: string[]): ConVar[]{
+        //TODO: LLEVAR A VARCAL
         let insumosConVars: ConVar[]
         // chequear que todas las variables de la cond existan en alguna tabla (sino se llena el campo error_compilacion)
         varNames.forEach(varName => {
@@ -44,7 +45,7 @@ export class ConCompiler extends VarCalculator{
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
         con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
         con.clausula_from = this.buildClausulaFrom(con);
-        con.clausula_where = this.buildClausulaWhere(con);
+        con.clausula_where = `WHERE ${this.buildClausulaWhere(con)} IS NOT TRUE`;
         this.salvarFuncionInformado(con.clausula_where);
     }
 
@@ -106,11 +107,6 @@ export class ConCompiler extends VarCalculator{
         AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
     }
     
-
-
-
-
-
     async compileAndRun(conName:string): Promise<void> {
         let con = this.myCons.find(c=>c.consistencia == conName);
         await this.compile(con);
