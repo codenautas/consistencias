@@ -1,6 +1,6 @@
 import * as bestGlobals from "best-globals";
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
-import { VarCalculator } from "varcal";
+import { Relacion, VarCalculator } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends VarCalculator{
@@ -10,6 +10,8 @@ export class ConCompiler extends VarCalculator{
 
     static calculatingAllVars:boolean=false;
     static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
+    tmpConVars: ConVar[];
+    
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
    
     async fetchDataFromDB() {
@@ -19,23 +21,6 @@ export class ConCompiler extends VarCalculator{
         
         // put in Varcal
         this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
-    }
-
-    validateInsumos(con:Consistencia): void {    
-        // call super
-        super.validateInsumos(con.insumos)
-        con.insumosConVars.push(...this.validateVarsAndBuildConVar(con.insumos.variables));
-    }
-
-    private validateVarsAndBuildConVar(varNames: string[]): ConVar[]{
-        //TODO: LLEVAR A VARCAL
-        let insumosConVars: ConVar[]
-        // chequear que todas las variables de la cond existan en alguna tabla (sino se llena el campo error_compilacion)
-        varNames.forEach(varName => {
-            let {varFound, relation} = this.findValidVar(varName);
-            insumosConVars.push(ConVar.buildFrom(varFound, relation));
-        });
-        return insumosConVars
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
@@ -76,6 +61,7 @@ export class ConCompiler extends VarCalculator{
     async compile(con:Consistencia) {
         try {
             this.preCompile(con);
+            this.pushAllInConVars(con);
             this.buildSQLExpression(con);
             await this.testBuiltSQL(con);
             con.markAsValid();
@@ -85,6 +71,21 @@ export class ConCompiler extends VarCalculator{
         finally {
             await con.updateDB(this.client);
         }
+    }
+    
+    pushAllInConVars(con: Consistencia): void {
+        con.insumosConVars.push(...this.tmpConVars)
+        this.tmpConVars = [];
+    }
+
+    // OVERRIDES super method
+    validateVars(varNames: string[]): void {
+        varNames.forEach(varName => {
+            let foundVar = this.validateVar(varName);
+            //TODO: put conVar "push logic" inside validateVar instead of validateVarS 
+            let relation:Relacion=this.getAliasIfOptionalRelation(varName);
+            this.tmpConVars.push(ConVar.buildFrom(foundVar, relation?relation.que_busco:undefined))
+        })
     }
 
     private async testBuiltSQL(con:Consistencia) {
@@ -138,7 +139,8 @@ export class ConCompiler extends VarCalculator{
             consistencias = await Consistencia.fetchAll(this.client, this.operativo);
         }
         
-        await this.calculateVars(idCaso);
+        
+        client query (await this.calculate(idCaso))
         
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
