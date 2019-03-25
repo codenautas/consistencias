@@ -1,6 +1,6 @@
 import * as bestGlobals from "best-globals";
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
-import { Relacion, VarCalculator } from "varcal";
+import { Relacion, VarCalculator, ExpressionContainer, Variable } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends VarCalculator{
@@ -60,8 +60,7 @@ export class ConCompiler extends VarCalculator{
      */
     async compile(con:Consistencia) {
         try {
-            this.preCompile(con);
-            this.pushAllInConVars(con);
+            this.prepareEC(con);
             this.buildSQLExpression(con);
             await this.testBuiltSQL(con);
             con.markAsValid();
@@ -73,19 +72,28 @@ export class ConCompiler extends VarCalculator{
         }
     }
     
+    //overrides super
+    prepareEC(con:Consistencia): any {
+        super.prepareEC(con);
+        this.pushAllInConVars(con);
+    }
+    
     pushAllInConVars(con: Consistencia): void {
         con.insumosConVars.push(...this.tmpConVars)
         this.tmpConVars = [];
     }
 
-    // OVERRIDES super method
-    validateVars(varNames: string[]): void {
-        varNames.forEach(varName => {
-            let foundVar = this.validateVar(varName);
-            //TODO: put conVar "push logic" inside validateVar instead of validateVarS 
-            let relation:Relacion=this.getAliasIfOptionalRelation(varName);
-            this.tmpConVars.push(ConVar.buildFrom(foundVar, relation?relation.que_busco:undefined))
-        })
+    //overrides super to add treatment for consistencia ConVars
+    // @ts-ignore it is not used here directly but in validateVars (super class' method)
+    private validateVar(varName: string): Variable {
+        let varFound:Variable = super.validateVar(varName);
+        this.addConVar(varName, varFound);
+        return varFound;
+    }
+
+    private addConVar(varName: string, varFound: Variable) {
+        let relation: Relacion = this.getAliasIfOptionalRelation(varName);
+        this.tmpConVars.push(ConVar.buildFrom(varFound, relation ? relation.que_busco : undefined));
     }
 
     private async testBuiltSQL(con:Consistencia) {
