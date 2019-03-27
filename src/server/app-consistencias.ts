@@ -8,7 +8,7 @@ import { inconsistencias } from "./table-inconsistencias";
 import { inconsistencias_ultimas } from "./table-inconsistencias_ultimas";
 import { in_con_var } from "./table-in_con_var";
 import {defConfig} from "./def-config";
-import { MenuInfo } from "operativos";
+import { MenuInfo, Request } from "operativos";
 
 export * from "./types-consistencias";
 
@@ -17,10 +17,19 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
     return class AppConsistencias extends Base{
         constructor(...args:any[]){ 
             super(args);
-            this.allProcedures = this.allProcedures.concat(procedures);
-            this.allClientFileNames.push({type:'js', module: 'consistencias', modPath: '../client', file: 'consistencias.js', path: 'client_modules'})
-            // this.allClientFileNames.push({type:'js', src: 'client/consistencias.js' })
         }
+
+        async getProcedures(){
+            var parentProc = await super.getProcedures()
+            return parentProc.concat(procedures);
+        }
+
+        clientIncludes(req:Request, hideBEPlusInclusions?:boolean){
+            return super.clientIncludes(req, hideBEPlusInclusions).concat([
+                {type:'js', module: 'consistencias', modPath: '../client', file: 'consistencias.js', path: 'client_modules'}
+            ])
+        }
+
         configStaticConfig(){
             super.configStaticConfig();
             this.setStaticConfig(defConfig);
