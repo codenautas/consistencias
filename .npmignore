@@ -1,0 +1,11 @@
+.git
+.vscode/
+
+local-*
+*-local.*
+
+# Never publish Typescript code
+src/
+
+# Always publish generated files (.js, .map. .d.ts) in order package users could execute it
+!dist/

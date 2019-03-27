@@ -3,34 +3,30 @@
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
   "version": "0.5.2",
   "author": "Codenautas <codenautas@googlegroups.com>",
+  "repository": "codenautas/consistencias",
   "license": "MIT",
-  "main": "server/app-consistencias.js",
-  "types": "server/app-consistencias.d.ts",
+  "main": "dist/server/app-consistencias.js",
+  "types": "dist/server/app-consistencias.d.ts",
   "files": [
-    "client",
-    "install",
-    "server",
-    "unlogged"
+    "dist",
+    "install"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/codenautas/consistencias.git"
-  },
   "dependencies": {
     "best-globals": "~0.10.7",
     "varcal": "~0.5.2"
   },
   "devDependencies": {
-    "types.d.ts": "~0.3.1"
+    "types.d.ts": "~0.3.1",
+    "mixin-patch": "~0.1.3"
   },
   "engines": {
     "node": ">= 8.0.0"
   },
   "scripts": {
     "prepare": "npm run build",
-    "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")",
-    "start": "node server/server-consistencias.js",
-    "dump": "npm run build && npm start -- --dump-db"
+    "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json & mixin-patch",
+    "build-ignoring-err": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")",
+    "start": "node dist/server/server-consistencias.js"
   },
   "qa-control": {
     "package-version": "0.3.0",

@@ -1,17 +1,18 @@
 "use strict";
 
-import * as operativos from "operativos";
-import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal } from "varcal";
+import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition } from "varcal";
 import { procedures } from "./procedures-consistencias";
 import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
 import { inconsistencias } from "./table-inconsistencias";
 import { inconsistencias_ultimas } from "./table-inconsistencias_ultimas";
 import { in_con_var } from "./table-in_con_var";
+import {defConfig} from "./def-config";
+import { MenuInfo } from "operativos";
 
 export * from "./types-consistencias";
 
-export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCalType>>(Base:T){
+export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Base:T){
     
     return class AppConsistencias extends Base{
         constructor(...args:any[]){ 
@@ -22,9 +23,10 @@ export function emergeAppConsistencias<T extends operativos.Constructor<AppVarCa
         }
         configStaticConfig(){
             super.configStaticConfig();
+            this.setStaticConfig(defConfig);
         }
-        getMenu():operativos.MenuDefinition{
-            let myMenuPart: operativos.MenuInfo[] = [
+        getMenu():MenuDefinition{
+            let myMenuPart: MenuInfo[] = [
                 {
                     menuType: 'menu', name: 'Consistencias', menuContent: [
                         { menuType: 'table', name: 'consistencias' },

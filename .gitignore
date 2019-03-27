@@ -66,5 +66,4 @@ local-*
 package-lock.json
 
 #don't version generated files
-/server
-/client
+/dist
