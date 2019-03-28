@@ -44,9 +44,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
 
     insumosConVars:ConVar[];
 
-    //elegir uno
     expresionValidada: string
-    rawExpression: string
 
     insumos: Insumos; 
     
