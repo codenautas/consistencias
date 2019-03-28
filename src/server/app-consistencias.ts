@@ -37,7 +37,7 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
         getMenu():MenuDefinition{
             let myMenuPart: MenuInfo[] = [
                 {
-                    menuType: 'menu', name: 'Consistencias', menuContent: [
+                    menuType: 'menu', name: 'consistencias', menuContent: [
                         { menuType: 'table', name: 'consistencias' },
                         { menuType: 'table', name: 'inconsistencias' },
                         { menuType: 'table', name: 'con_var' },
