@@ -18,9 +18,6 @@ export class ConCompiler extends VarCalculator{
         await super.fetchDataFromDB();
         this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
         this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
-        
-        // put in Varcal
-        this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
@@ -32,6 +29,10 @@ export class ConCompiler extends VarCalculator{
         con.clausula_from = this.buildClausulaFrom(con);
         con.clausula_where = `WHERE ${this.buildClausulaWhere(con)} IS NOT TRUE`;
         this.salvarFuncionInformado(con.clausula_where);
+    }
+
+    protected buildClausulaFrom(ec:ExpressionContainer): string {
+        return this.buildInsumosTDsFromClausule(ec.orderedInsumosTDNames) + this.buildOptRelationsFromClausule(ec.insumosOptionalRelations);
     }
 
     private salvarFuncionInformado(clausula_where:string) {

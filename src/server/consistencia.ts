@@ -49,9 +49,8 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     insumos: Insumos; 
     
     orderedInsumosTDNames: string[]
-    notOrderedInsumosOptionalRelations: Relacion[] 
+    insumosOptionalRelations: Relacion[] 
     lastTD:TablaDatos
-    firstTD:TablaDatos
 
     clausula_from:string
     clausula_where:string
