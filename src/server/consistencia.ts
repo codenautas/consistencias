@@ -25,10 +25,14 @@ export interface ConsistenciaDB {
 }
 
 export class Consistencia implements ConsistenciaDB, ExpressionContainer{
+    // @ts-ignore https://github.com/codenautas/operativos/issues/4
     operativo: string
+    // @ts-ignore https://github.com/codenautas/operativos/issues/4    
     consistencia: string
     precondicion?: string
+    // @ts-ignore https://github.com/codenautas/operativos/issues/4
     postcondicion: string
+    // @ts-ignore https://github.com/codenautas/operativos/issues/4
     activa: boolean
     campos_pk?: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
     error_compilacion?: string
@@ -42,19 +46,15 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     variables_de_contexto?: string
     compilada?: Date
 
-    insumosConVars:ConVar[];
+    insumosConVars:ConVar[] = [];
 
-    expresionValidada: string
+    orderedInsumosTDNames: string[] = []
+    insumosOptionalRelations: Relacion[] = [] 
 
-    insumos: Insumos; 
-    
-    orderedInsumosTDNames: string[]
-    insumosOptionalRelations: Relacion[] 
-    lastTD:TablaDatos
+    tdsNeedByExpression: string[] = [];
 
-    clausula_from:string
-    clausula_where:string
-
+    constructor(public expresionValidada?:string, public insumos?: Insumos, public lastTD?:TablaDatos, public clausula_from?:string, public clausula_where?:string ){
+    }
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
@@ -69,8 +69,6 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     prepare(){
         this.cleanAll();
         this.precondicion = this.precondicion || 'true';
-        
-        super.prepare();
     }
 
     compilationFails(error:Error): void {

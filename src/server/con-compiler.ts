@@ -1,23 +1,23 @@
 import * as bestGlobals from "best-globals";
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
-import { Relacion, VarCalculator, ExpressionContainer, Variable } from "varcal";
+import { Relacion, ExpressionProcessor, ExpressionContainer, Variable } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
-export class ConCompiler extends VarCalculator{
+export class ConCompiler extends ExpressionProcessor{
     
-    myCons: Consistencia[];
-    myConVars: ConVar[];
+    myCons: Consistencia[] = [];
+    myConVars: ConVar[] = [];
 
     static calculatingAllVars:boolean=false;
     static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
-    tmpConVars: ConVar[];
+    tmpConVars: ConVar[] = [];
     
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
    
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
-        this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
+        this.myCons = await Consistencia.fetchAll(this.client, <string>this.operativo);
+        this.myConVars = await ConVar.fetchAll(this.client, <string>this.operativo);
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
@@ -86,14 +86,14 @@ export class ConCompiler extends VarCalculator{
 
     //overrides super to add treatment for consistencia ConVars
     // @ts-ignore it is not used here directly but in validateVars (super class' method)
-    private validateVar(varName: string): Variable {
+    protected validateVar(varName: string): Variable {
         let varFound:Variable = super.validateVar(varName);
         this.addConVar(varName, varFound);
         return varFound;
     }
 
     private addConVar(varName: string, varFound: Variable) {
-        let relation: Relacion = this.getAliasIfOptionalRelation(varName);
+        let relation: Relacion | undefined = this.getAliasIfOptionalRelation(varName);
         this.tmpConVars.push(ConVar.buildFrom(varFound, relation ? relation.que_busco : undefined));
     }
 
@@ -108,15 +108,15 @@ export class ConCompiler extends VarCalculator{
 
     getCompleteQuery(con: Consistencia): string {
         return `${con.getCompleteQuery(con.insumosConVars)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(<string>this.operativo)}
         AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
     }
     
     async compileAndRun(conName:string): Promise<void> {
-        let con = this.myCons.find(c=>c.consistencia == conName);
+        let con = <Consistencia>this.myCons.find(c=>c.consistencia == conName);
         await this.compile(con);
         await this.fetchDataFromDB(); // reload data from db // this.myConVars = con.insumosConVars
-        await this.consistir(null, con);
+        await this.consistir(undefined, con);
     }
 
     // async compilar(con: Consistencia){
@@ -145,7 +145,7 @@ export class ConCompiler extends VarCalculator{
             consistenciaCondition = `AND consistencia=${quoteLiteral(consistenciaACorrer.consistencia)}`;
             consistencias = [consistenciaACorrer];
         } else {
-            consistencias = await Consistencia.fetchAll(this.client, this.operativo);
+            consistencias = await Consistencia.fetchAll(this.client, <string> this.operativo);
         }
         
         
