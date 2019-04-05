@@ -1,7 +1,7 @@
 import { ConCompiler } from "con-compiler";
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { ExpressionContainer, Relacion, TablaDatos } from "varcal";
+import { IExpressionContainer, Relacion, TablaDatos } from "varcal";
 import { ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
@@ -31,7 +31,7 @@ export interface ConsistenciaDB {
 // }
 // fetchAllPrueba<Consistencia>('consistencia', 'asdf', <Client>{})
 
-export class Consistencia implements ConsistenciaDB, ExpressionContainer{
+export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
     operativo: string
     // @ts-ignore https://github.com/codenautas/operativos/issues/4    
@@ -41,7 +41,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     postcondicion: string
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
     activa: boolean
-    campos_pk?: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
+    campos_pk!: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
     error_compilacion?: string
     valida?: boolean
     explicacion?: string
@@ -58,7 +58,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     // complexExp:complexExpression
     tdsNeedByExpression: string[]= [];
 
-    expresionValidada!: string
+    expressionProcesada!: string
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
@@ -106,7 +106,8 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     private cleanAll() {
         // clean consistencia
         this.valida = false;
-        this.compilada = this.clausula_from = this.clausula_where = this.campos_pk = this.error_compilacion = undefined;
+        this.compilada = this.error_compilacion = undefined;
+        this.campos_pk = this.clausula_from = this.clausula_where = '';
 
         // clean con vars to insert
         this.insumosConVars = [];
@@ -128,7 +129,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
         // insert con_vars
         if (this.insumosConVars.length > 0) {
             let conVarInsertsQuery = `INSERT INTO con_var (operativo, consistencia, expresion_var, tabla_datos, variable, relacion, texto) VALUES 
-            ${this.insumosConVars.map(cv => `($1, $2,${quoteLiteral(cv.buildExpresionVar())},${quoteLiteral(cv.tabla_datos)},${quoteLiteral(cv.variable)},${quoteNullable(cv.relacion)},${quoteNullable(cv.texto)})`).join(', ')}`;
+            ${this.insumosConVars.map(cv => `($1, $2,${quoteLiteral(cv.buildExpresionVar())},${quoteLiteral(cv.tabla_datos)},${quoteLiteral(cv.variable)},${quoteNullable(cv.relacion?cv.relacion:null)},${quoteNullable(cv.texto?cv.texto:null)})`).join(', ')}`;
             await client.query(conVarInsertsQuery, basicParams).execute();
         }
 

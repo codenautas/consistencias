@@ -1,17 +1,25 @@
 import { Client } from 'pg-promise-strict';
 import { Variable } from 'varcal';
 
-export class ConVarDB {
+export interface ConVarDB {
     operativo: string
     consistencia: string
     expresion_var: string
     variable: string
     tabla_datos: string
     relacion?: string
-    texto: string
+    texto?: string
 }
 
-export class ConVar extends ConVarDB {
+export class ConVar implements ConVarDB {
+    operativo!: string
+    consistencia!: string
+    expresion_var!: string
+    variable!: string
+    tabla_datos!: string
+    relacion?: string
+    texto?: string
+
     static buildFrom(varFound: Variable, relation?: string): any {
         let cv = new ConVar()
         Object.assign(cv, <ConVar>{operativo: varFound.operativo, tabla_datos: varFound.tabla_datos, variable:varFound.variable, texto:varFound.nombre });
@@ -19,10 +27,10 @@ export class ConVar extends ConVarDB {
         return cv
     }
     buildExpresionVar(): string {
-        return this.relacion? this.relacion + '.' + this.variable : this.variable;
+        return this.relacion? <string>this.relacion + '.' + this.variable : this.variable;
     }
     static async fetchAll(client: Client, op: string): Promise<ConVar[]> {
         let result = await client.query(`SELECT * FROM con_var c WHERE c.operativo = $1`, [op]).fetchAll();
-        return <ConVar[]>result.rows.map((cv: ConVar) => Object.setPrototypeOf(cv, ConVar.prototype));
+        return (<ConVar[]>result.rows).map((cv: ConVar) => Object.setPrototypeOf(cv, ConVar.prototype));
     }
 }
