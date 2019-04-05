@@ -1,6 +1,7 @@
-import { Insumos } from "expre-parser";
+import { ConCompiler } from "con-compiler";
+import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { ExpressionContainer, OperativoGenerator, Relacion, TablaDatos } from "varcal";
+import { ExpressionContainer, Relacion, TablaDatos } from "varcal";
 import { ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
@@ -23,6 +24,12 @@ export interface ConsistenciaDB {
     variables_de_contexto?: string
     compilada?: Date
 }
+
+// async function fetchAllPrueba<ModelClass>(tableName:string, op:string, client:Client){
+//     let result = await client.query(`SELECT * FROM ${tableName} c WHERE c.operativo = $1`, [op]).fetchAll();
+//     return (<ModelClass[]>result.rows).map((jsonobj: ModelClass) => Object.setPrototypeOf(jsonobj, (ModelClass).prototype));
+// }
+// fetchAllPrueba<Consistencia>('consistencia', 'asdf', <Client>{})
 
 export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
@@ -48,24 +55,28 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
 
     insumosConVars:ConVar[] = [];
 
+    // complexExp:complexExpression
+    tdsNeedByExpression: string[]= [];
+
+    expresionValidada!: string
+    insumos!: EP.Insumos; 
+    
     orderedInsumosTDNames: string[] = []
-    insumosOptionalRelations: Relacion[] = [] 
+    insumosOptionalRelations: Relacion[] = []
+    lastTD!:TablaDatos
 
-    tdsNeedByExpression: string[] = [];
-
-    constructor(public expresionValidada?:string, public insumos?: Insumos, public lastTD?:TablaDatos, public clausula_from?:string, public clausula_where?:string ){
-    }
+    clausula_from!:string
+    clausula_where!:string
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
-        return Object.assign(new Consistencia(), result.row);
+        return Object.setPrototypeOf(result.row, Consistencia.prototype);
     }
-    
+
     static async fetchAll(client: Client, op: string): Promise<Consistencia[]> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1`, [op]).fetchAll();
-        return <Consistencia[]>result.rows.map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
-    }
-    
+        return (<Consistencia[]>result.rows).map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
+    }    
     prepare(){
         this.cleanAll();
         this.precondicion = this.precondicion || 'true';
@@ -78,7 +89,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
         throw new Error(this.error_compilacion + this.msgErrorCompilación());
     }  
 
-    getExpression():string {
+    getUserExpression():string {
         return '(' + this.precondicion + ') AND (' + this.postcondicion + ')';
     }
 
@@ -95,8 +106,7 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
     private cleanAll() {
         // clean consistencia
         this.valida = false;
-        this.compilada = null;
-        this.clausula_from = this.clausula_where = this.campos_pk = this.error_compilacion = null;
+        this.compilada = this.clausula_from = this.clausula_where = this.campos_pk = this.error_compilacion = undefined;
 
         // clean con vars to insert
         this.insumosConVars = [];
@@ -162,8 +172,8 @@ export class Consistencia implements ConsistenciaDB, ExpressionContainer{
 
     private getConVarJsonB(conVar: ConVar) {
         let jsonbPropertyKey = quoteLiteral((conVar.relacion? conVar.relacion: conVar.tabla_datos) + '.' + conVar.variable);
-        //TODO: se está usando OperativoGenerator.instanceObj en lugar de this.opGen, mejorar
-        let jsonbValueAlias = conVar.relacion? conVar.relacion: OperativoGenerator.instanceObj.getUniqueTD(conVar.tabla_datos).getTableName();
+        //TODO: se está usando ConCompiler.instanceObj en lugar de this.opGen, mejorar
+        let jsonbValueAlias = conVar.relacion? conVar.relacion: ConCompiler.instanceObj.getUniqueTD(conVar.tabla_datos).getTableName();
         return `${jsonbPropertyKey},${quoteIdent(jsonbValueAlias)}.${quoteIdent(conVar.variable)}`;
     }
 
