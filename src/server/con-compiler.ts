@@ -1,5 +1,5 @@
-import * as bestGlobals from "best-globals";
-import { quoteIdent, quoteLiteral } from "pg-promise-strict";
+// import * as bestGlobals from "best-globals";
+import { quoteIdent, quoteLiteral, ResultCommand } from "pg-promise-strict";
 import { Relacion, ExpressionProcessor, ExpressionContainer, Variable } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
@@ -9,15 +9,17 @@ export class ConCompiler extends ExpressionProcessor{
     myConVars: ConVar[] = [];
 
     static calculatingAllVars:boolean=false;
-    static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
+    // static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
     tmpConVars: ConVar[] = [];
+    static varCalculation: Promise<ResultCommand>;
+
     
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
    
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        this.myCons = await Consistencia.fetchAll(this.client, <string>this.operativo);
-        this.myConVars = await ConVar.fetchAll(this.client, <string>this.operativo);
+        this.myCons = await Consistencia.fetchAll(this.client, this.operativo);
+        this.myConVars = await ConVar.fetchAll(this.client, this.operativo);
     }
 
     //chequear que la expresiones (pre y post) sea correcta (corriendo un select simple para ver si falla postgres) 
@@ -108,7 +110,7 @@ export class ConCompiler extends ExpressionProcessor{
 
     getCompleteQuery(con: Consistencia): string {
         return `${con.getCompleteQuery(con.insumosConVars)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(<string>this.operativo)}
+        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
         AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
     }
     
@@ -145,12 +147,13 @@ export class ConCompiler extends ExpressionProcessor{
             consistenciaCondition = `AND consistencia=${quoteLiteral(consistenciaACorrer.consistencia)}`;
             consistencias = [consistenciaACorrer];
         } else {
-            consistencias = await Consistencia.fetchAll(this.client, <string> this.operativo);
+            consistencias = await Consistencia.fetchAll(this.client, this.operativo);
         }
         
         
-        client query (await this.calculate(idCaso))
-        
+        // client query (await this.calculate(idCaso))
+        await this.calculateVars(idCaso);
+
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
         
@@ -214,23 +217,25 @@ export class ConCompiler extends ExpressionProcessor{
         return 'ok';
     }
     
-    // TODO: comento para que falle y revisar las referencias a varcal_provisorio
-    // private async calculateVars(idCaso: string|undefined): Promise<void> {
-    //     if(idCaso){
-    //         await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
-    //     }else{
-    //         //semaphore
-    //         //var now = bestGlobals.datetime.now();
-    //         var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
-    //         if (!Compiler.calculatingAllVars && now.sub(Compiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
-    //             Compiler.calculatingAllVars = true;
-    //             let varCalculationResult = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
-    //             await varCalculationResult;
-    //             Compiler.calculatingAllVars = false;
-    //             Compiler.lastCalculateAllVars = now;
-    //         } else {
-    //             await varCalculationResult;
-    //         }
-    //     }
-    // }
+    //TODO: comento para que falle y revisar las referencias a varcal_provisorio
+    private async calculateVars(idCaso: string|undefined): Promise<void> {
+        if(idCaso){
+            await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+        }else{
+            //semaphore
+            //var now = bestGlobals.datetime.now();
+            // var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
+            // if (!ConCompiler.calculatingAllVars && now.sub(ConCompiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
+            //     ConCompiler.calculatingAllVars = true;
+                ConCompiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+                await ConCompiler.varCalculation;
+                // ConCompiler.calculatingAllVars = false;
+                // ConCompiler.lastCalculateAllVars = now;
+            } 
+            // else {
+            //     await ConCompiler.varCalculation;
+            // }
+        }
+    }
+
 }
