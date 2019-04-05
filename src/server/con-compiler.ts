@@ -1,6 +1,6 @@
 // import * as bestGlobals from "best-globals";
 import { quoteIdent, quoteLiteral, ResultCommand } from "pg-promise-strict";
-import { Relacion, ExpressionProcessor, ExpressionContainer, Variable } from "varcal";
+import { Relacion, ExpressionProcessor, IExpressionContainer, Variable } from "varcal";
 import { Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends ExpressionProcessor{
@@ -29,11 +29,11 @@ export class ConCompiler extends ExpressionProcessor{
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
         con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
         con.clausula_from = this.buildClausulaFrom(con);
-        con.clausula_where = `WHERE ${this.buildClausulaWhere(con)} IS NOT TRUE`;
+        con.clausula_where = `WHERE ${con.expressionProcesada} IS NOT TRUE`;
         this.salvarFuncionInformado(con.clausula_where);
     }
 
-    protected buildClausulaFrom(ec:ExpressionContainer): string {
+    protected buildClausulaFrom(ec:IExpressionContainer): string {
         return this.buildInsumosTDsFromClausule(ec.orderedInsumosTDNames) + this.buildOptRelationsFromClausule(ec.insumosOptionalRelations);
     }
 
@@ -231,11 +231,10 @@ export class ConCompiler extends ExpressionProcessor{
                 await ConCompiler.varCalculation;
                 // ConCompiler.calculatingAllVars = false;
                 // ConCompiler.lastCalculateAllVars = now;
-            } 
-            // else {
+        } 
+            // }else{
             //     await ConCompiler.varCalculation;
             // }
-        }
     }
 
 }
