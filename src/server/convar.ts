@@ -7,7 +7,7 @@ export class ConVarDB {
     expresion_var: string
     variable: string
     tabla_datos: string
-    relacion: string
+    relacion?: string
     texto: string
 }
 
