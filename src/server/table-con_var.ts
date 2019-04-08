@@ -1,5 +1,5 @@
 "use strict";
-import {TableDefinition} from "operativos"
+import {TableDefinition} from "varcal"
 
 export function con_var():TableDefinition{
     return {

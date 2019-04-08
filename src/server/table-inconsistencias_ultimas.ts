@@ -1,5 +1,5 @@
 "use strict";
-import {TableContext,TableDefinition} from "operativos"
+import {TableContext,TableDefinition} from "varcal"
 
 export function inconsistencias_ultimas(context:TableContext):TableDefinition{
     var admin = context.user.rol === 'admin';

@@ -1,6 +1,6 @@
 "use strict";
 
-import { ProcedureContext } from "operativos";
+import { ProcedureContext } from "varcal";
 import { ConCompiler } from "./con-compiler";
 import { Consistencia } from "./types-consistencias";
 

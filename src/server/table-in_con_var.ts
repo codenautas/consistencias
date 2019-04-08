@@ -1,5 +1,5 @@
 "use strict";
-import {TableDefinition, TableContext} from "operativos"
+import {TableDefinition, TableContext} from "varcal"
 
 export function in_con_var(context:TableContext):TableDefinition{
     var admin = context.user.rol === 'admin';

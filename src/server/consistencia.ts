@@ -1,7 +1,7 @@
-import { ConCompiler } from "con-compiler";
 import * as EP from "expre-parser";
 import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
 import { IExpressionContainer, Relacion, TablaDatos } from "varcal";
+import { ConCompiler } from "./con-compiler";
 import { ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
