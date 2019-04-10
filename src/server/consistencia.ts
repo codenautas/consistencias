@@ -1,8 +1,6 @@
 import * as EP from "expre-parser";
-import { Client, quoteIdent, quoteLiteral, quoteNullable } from 'pg-promise-strict';
-import { IExpressionContainer, Relacion, TablaDatos } from "varcal";
 import { ConCompiler } from "./con-compiler";
-import { ConVar } from "./types-consistencias";
+import { IExpressionContainer, Relacion, TablaDatos, Client, quoteIdent, quoteLiteral, quoteNullable, ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
     operativo: string
@@ -41,8 +39,10 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     postcondicion: string
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
     activa: boolean
-    campos_pk!: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
+    campos_pk?: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
     error_compilacion?: string
+    clausula_from?:string
+    clausula_where?:string
     valida?: boolean
     explicacion?: string
     falsos_positivos?: boolean
@@ -58,24 +58,22 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     // complexExp:complexExpression
     tdsNeedByExpression: string[]= [];
 
-    expressionProcesada!: string
+    expressionProcesada: string = '';
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = []
     lastTD!:TablaDatos
 
-    clausula_from!:string
-    clausula_where!:string
-
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
-        return Object.setPrototypeOf(result.row, Consistencia.prototype);
+        return Object.assign(new Consistencia, result.row)
+        // return Object.setPrototypeOf(result.row, Consistencia.prototype);
     }
 
     static async fetchAll(client: Client, op: string): Promise<Consistencia[]> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1`, [op]).fetchAll();
-        return (<Consistencia[]>result.rows).map((con: Consistencia) => Object.setPrototypeOf(con, Consistencia.prototype));
+        return (<Consistencia[]>result.rows).map((con: Consistencia) => Object.assign(new Consistencia, con));
     }    
     prepare(){
         this.cleanAll();
@@ -107,7 +105,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         // clean consistencia
         this.valida = false;
         this.compilada = this.error_compilacion = undefined;
-        this.campos_pk = this.clausula_from = this.clausula_where = '';
+        this.campos_pk = this.clausula_from = this.clausula_where = undefined;
 
         // clean con vars to insert
         this.insumosConVars = [];
@@ -180,7 +178,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
 
     private getPkIntegrada(): string {
         return `jsonb_build_object(
-          ${this.campos_pk.split(',').map(campoConAlias => Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
+          ${(<string>this.campos_pk).split(',').map(campoConAlias => Consistencia.pkIntegradaElement(campoConAlias)).join(',')}
         ) as pk_integrada`;
     }
 
