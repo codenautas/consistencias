@@ -1,5 +1,4 @@
-import { Client } from 'pg-promise-strict';
-import { Variable } from 'varcal';
+import { Client, Variable } from './types-consistencias';
 
 export interface ConVarDB {
     operativo: string

@@ -1,7 +1,4 @@
-// import * as bestGlobals from "best-globals";
-import { quoteIdent, quoteLiteral, ResultCommand } from "pg-promise-strict";
-import { Relacion, ExpressionProcessor, IExpressionContainer, Variable } from "varcal";
-import { Consistencia, ConVar } from "./types-consistencias";
+import { Relacion, ExpressionProcessor, IExpressionContainer, Variable, quoteIdent, quoteLiteral, ResultCommand, Consistencia, ConVar } from "./types-consistencias";
 
 export class ConCompiler extends ExpressionProcessor{
     
@@ -77,6 +74,7 @@ export class ConCompiler extends ExpressionProcessor{
     
     //overrides super
     prepareEC(con:Consistencia): any {
+        con.expressionProcesada = con.getUserExpression();
         super.prepareEC(con);
         this.pushAllInConVars(con);
     }

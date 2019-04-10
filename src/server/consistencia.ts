@@ -67,12 +67,13 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
+        // Using assign instead of setPrototypeOf because we need to have initialized properties
         return Object.assign(new Consistencia, result.row)
-        // return Object.setPrototypeOf(result.row, Consistencia.prototype);
     }
 
     static async fetchAll(client: Client, op: string): Promise<Consistencia[]> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1`, [op]).fetchAll();
+        // Using assign instead of setPrototypeOf because we need to have initialized properties
         return (<Consistencia[]>result.rows).map((con: Consistencia) => Object.assign(new Consistencia, con));
     }    
     prepare(){
