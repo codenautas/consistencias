@@ -1,10 +1,8 @@
 "use strict";
 
-import { ProcedureContext } from "varcal";
+import { ProcedureContext, coreFunctionParameters } from "varcal";
 import { ConCompiler } from "./con-compiler";
 import { Consistencia } from "./types-consistencias";
-
-type ConsistenciasPk = {operativo: string, consistencia: string}
 
 var procedures = [
     {
@@ -13,7 +11,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
+        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
                 await compiler.fetchDataFromDB();
@@ -30,7 +28,7 @@ var procedures = [
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: {operativo: string}){
+        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
             let compiler = new ConCompiler(context.client, params.operativo);
             await compiler.fetchDataFromDB();
             let cons = await Consistencia.fetchAll(context.client, params.operativo);
@@ -57,7 +55,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: ConsistenciasPk){
+        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
             // correr una consistencia = consistir todos los casos en dicha consistencia
             
             let compiler = new ConCompiler(context.client, params.operativo);
@@ -105,7 +103,7 @@ var procedures = [
             {name:'operativo', typeName:'text'},
             {name:'id_caso'  , typeName:'text'}
         ],
-        coreFunction:async function(context:ProcedureContext, parameters:{operativo:string, id_caso:string}){
+        coreFunction:async function(context:ProcedureContext, parameters:coreFunctionParameters){
             // consistir_encuesta = correr todas las consistencias para dicha encuesta
             
             let compiler = new ConCompiler(context.client, parameters.operativo);
