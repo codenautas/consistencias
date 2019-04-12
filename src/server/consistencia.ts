@@ -78,7 +78,6 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     }    
     prepare(){
         this.cleanAll();
-        this.precondicion = this.precondicion || 'true';
     }
 
     compilationFails(error:Error): void {
@@ -88,8 +87,8 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         throw new Error(this.error_compilacion + this.msgErrorCompilación());
     }  
 
-    getUserExpression():string {
-        return '(' + this.precondicion + ') AND (' + this.postcondicion + ')';
+    fusionUserExpressions():void {
+        this.expressionProcesada = '(' + (this.precondicion || 'true') + ') AND (' + this.postcondicion + ')';
     }
 
     private msgErrorCompilación() {
@@ -144,11 +143,11 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         await client.query(conUpdateQuery, params).execute();
     }
 
-    correr() {
-        if (!this.valida) {
-            throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
-        }
-    }
+    // correr() {
+    //     if (!this.valida) {
+    //         throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
+    //     }
+    // }
 
     //TODO: unificar manejo de conVars e insumosVars desde el compilar y desde el consistir
     getCompleteQuery(conVars: ConVar[]): string {

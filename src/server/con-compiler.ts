@@ -74,11 +74,11 @@ export class ConCompiler extends ExpressionProcessor{
     
     //overrides super
     prepareEC(con:Consistencia): any {
-        con.expressionProcesada = con.getUserExpression();
+        con.prepare();
         super.prepareEC(con);
         this.pushAllInConVars(con);
     }
-    
+
     pushAllInConVars(con: Consistencia): void {
         con.insumosConVars.push(...this.tmpConVars)
         this.tmpConVars = [];
@@ -125,6 +125,10 @@ export class ConCompiler extends ExpressionProcessor{
     // }
 
     async consistir(idCaso?:string, consistenciaACorrer?:Consistencia){
+        // TODO: ver como validar si se está consistiendo una con valida
+        // if (!this.valida) {
+        //     throw new Error('La consistencia ' + this.consistencia + ' debe haber compilado exitosamente');
+        // }
         //se verifica si vino idCaso
         //TODO generalizar con mainTD y deshardcodear id_caso
         // y cuando se generalice tener en cuenta que pueden ser mas de una pk (hoy es solo una mainTDPK)
