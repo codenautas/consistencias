@@ -26,24 +26,11 @@ export class ConCompiler extends ExpressionProcessor{
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
         con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
         con.clausula_from = this.buildClausulaFrom(con);
-        con.clausula_where = `WHERE ${con.expressionProcesada} IS NOT TRUE`;
-        this.salvarFuncionInformado(con.clausula_where);
+        con.setClausulaWhere();   
     }
 
     protected buildClausulaFrom(ec:IExpressionContainer): string {
         return this.buildInsumosTDsFromClausule(ec.orderedInsumosTDNames) + this.buildOptRelationsFromClausule(ec.insumosOptionalRelations);
-    }
-
-    private salvarFuncionInformado(clausula_where:string) {
-        //TODO: sacar esto de acá
-        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
-        function regexFunc(_x: string, centro: string) {
-            return 'informado(' + centro + ')';
-        }
-        clausula_where = clausula_where.replace(regex, regexFunc);
-
-        // this.clausula_where = this.clausula_where.replace(new RegExp('\binformado\(null2zero\(([^()]+)\)\)', 'gi'), '$1' + replaceStr + '$3');
-        return clausula_where;
     }
 
     /**

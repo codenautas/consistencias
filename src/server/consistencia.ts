@@ -186,4 +186,17 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         let [alias, field] = campoConAlias.split('.');
         return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
     }
+    setClausulaWhere() {
+        this.clausula_where = `WHERE ${this.expressionProcesada} IS NOT TRUE`;
+        this.salvarFuncionInformado();
+    }
+    private salvarFuncionInformado() {
+        //TODO: sacar esto de acá
+        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
+        function regexFunc(_x: string, centro: string) {
+            return 'informado(' + centro + ')';
+        }
+        this.clausula_where = (<string>this.clausula_where).replace(regex, regexFunc);
+
+    }
 }
