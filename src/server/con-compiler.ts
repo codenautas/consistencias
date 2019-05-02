@@ -63,6 +63,7 @@ export class ConCompiler extends ExpressionProcessor{
     prepareEC(con:Consistencia): any {
         con.prepare();
         super.prepareEC(con);
+        con.expresionProcesada = this.getWrappedExpression(con.expresionProcesada, con.lastTD.getQuotedPKsCSV());
         this.pushAllInConVars(con);
     }
 
