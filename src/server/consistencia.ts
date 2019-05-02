@@ -58,7 +58,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     // complexExp:complexExpression
     tdsNeedByExpression: string[]= [];
 
-    expressionProcesada: string = '';
+    expresionProcesada: string = '';
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
@@ -88,7 +88,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     }  
 
     fusionUserExpressions():void {
-        this.expressionProcesada = '(' + (this.precondicion || 'true') + ') AND (' + this.postcondicion + ')';
+        this.expresionProcesada = '(' + (this.precondicion || 'true') + ') AND (' + this.postcondicion + ')';
     }
 
     private msgErrorCompilación() {
@@ -187,7 +187,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
     }
     setClausulaWhere() {
-        this.clausula_where = `WHERE ${this.expressionProcesada} IS NOT TRUE`;
+        this.clausula_where = `WHERE ${this.expresionProcesada} IS NOT TRUE`;
         this.salvarFuncionInformado();
     }
     private salvarFuncionInformado() {
