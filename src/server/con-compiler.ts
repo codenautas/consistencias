@@ -107,11 +107,6 @@ export class ConCompiler extends ExpressionProcessor{
         await this.consistir(undefined, con);
     }
 
-    // async compilar(con: Consistencia){
-    //     await con.compilar(this.client);
-    //     await this.consistir(null,con);
-    // }
-
     async consistir(idCaso?:string, consistenciaACorrer?:Consistencia){
         // TODO: ver como validar si se está consistiendo una con valida
         // if (!this.valida) {
