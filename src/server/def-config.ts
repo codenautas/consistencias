@@ -19,7 +19,7 @@ install:
     scripts:
       post-adapt: 
       - para-install.sql
-      - wrappers.sql
+      - ../node_modules/varcal/install/wrappers.sql
       - ../node_modules/pg-triggers/lib/recreate-his.sql
       - ../node_modules/pg-triggers/lib/table-changes.sql
       - ../node_modules/pg-triggers/lib/function-changes-trg.sql
