@@ -135,7 +135,6 @@ export class ConCompiler extends ExpressionProcessor{
             consistencias = await Consistencia.fetchAll(this.client, this.operativo);
         }
         
-        
         // client query (await this.calculate(idCaso))
         await this.calculateVars(idCaso);
 

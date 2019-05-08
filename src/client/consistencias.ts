@@ -37,7 +37,7 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
                     boton.textContent = '¡listo!';
                     boton.title = result;
                     boton.style.backgroundColor = '#8F8';
-                    alertPromise('todas las consistencias compiladas exitosamente (sin consistir, solo compilación)');
+                    alertPromise(result);
                 }, function (err) {
                     boton.textContent = 'error';
                     boton.style.backgroundColor = '#FF8';
