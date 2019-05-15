@@ -81,8 +81,8 @@ export class ConCompiler extends ExpressionProcessor{
     }
 
     private addConVar(varName: string, varFound: Variable) {
-        let relation: Relacion | undefined = this.getAliasIfOptionalRelation(varName);
-        this.tmpConVars.push(ConVar.buildFrom(varFound, relation ? relation.que_busco : undefined));
+        let relation: Relacion | undefined = this.getOptionalRelationForAlias(varName);
+        this.tmpConVars.push(ConVar.buildFrom(varFound, relation ? relation.tiene : undefined));
     }
 
     private async testBuiltSQL(con:Consistencia) {
