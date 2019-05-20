@@ -88,7 +88,8 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     }  
 
     fusionUserExpressions():void {
-        this.expresionProcesada = '(' + (this.precondicion || 'true') + ') AND (' + this.postcondicion + ')';
+        // if the precond passes and postcondicion doesn't, then produce an inconsistency
+        this.expresionProcesada = `(${this.precondicion || 'true'} ) AND (${this.postcondicion}) IS NOT TRUE`;
     }
 
     private msgErrorCompilación() {
@@ -187,7 +188,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
     }
     setClausulaWhere() {
-        this.clausula_where = `WHERE ${this.expresionProcesada} IS NOT TRUE`;
+        this.clausula_where = `WHERE ${this.expresionProcesada}`;
         this.salvarFuncionInformado();
     }
     private salvarFuncionInformado() {

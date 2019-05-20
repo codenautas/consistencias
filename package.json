@@ -1,7 +1,7 @@
 {
   "name": "consistencias",
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "repository": "codenautas/consistencias",
   "license": "MIT",
@@ -14,10 +14,10 @@
   "dependencies": {
     "backend-plus": "^0.29.34",
     "best-globals": "~0.10.16",
-    "varcal": "~0.6.0"
+    "varcal": "~0.7.0"
   },
   "devDependencies": {
-    "types.d.ts": "~0.4.1",
+    "types.d.ts": "~0.4.3",
     "mixin-patch": "~0.2.0"
   },
   "engines": {
@@ -26,7 +26,7 @@
   "scripts": {
     "prepare": "npm run build",
     "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
-    "build-ignoring-err": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
+    "build-force": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "start": "node dist/server/server-consistencias.js"
   },
   "qa-control": {
