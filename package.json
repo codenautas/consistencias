@@ -12,8 +12,6 @@
     "install"
   ],
   "dependencies": {
-    "backend-plus": "^0.29.34",
-    "best-globals": "~0.10.16",
     "varcal": "~0.7.0"
   },
   "devDependencies": {
