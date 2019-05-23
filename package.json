@@ -1,7 +1,7 @@
 {
   "name": "consistencias",
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "repository": "codenautas/consistencias",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "install"
   ],
   "dependencies": {
-    "varcal": "~0.7.0"
+    "varcal": "~0.7.1"
   },
   "devDependencies": {
     "types.d.ts": "~0.4.3",
