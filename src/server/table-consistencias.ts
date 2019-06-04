@@ -17,7 +17,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "clausula_from"     , typeName: "text"    , visible:false, editable:false},
             { name: "clausula_where"    , typeName: "text"    , visible:false, editable:false},
             { name: "campos_pk"         , typeName: "text"    , visible:false, editable:false},
-            { name: "error_compilacion" , typeName: "text"    , visible:false, editable:false},
+            { name: "error_compilacion" , typeName: "text"    , editable:false},
             { name: "valida"            , typeName: "boolean" , editable:false},
             { name: "explicacion"       , typeName: "text"    , isName:true},
             { name: "falsos_positivos"  , typeName: "boolean"    },
