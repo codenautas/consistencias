@@ -1,4 +1,5 @@
 import { Client, Variable } from './types-consistencias';
+import { Relacion } from 'varcal';
 
 export interface ConVarDB {
     operativo: string
@@ -19,10 +20,10 @@ export class ConVar implements ConVarDB {
     relacion?: string
     texto?: string
 
-    static buildFrom(varFound: Variable, relation?: string): any {
+    static buildFrom(varFound: Variable, relation?: Relacion): any {
         let cv = new ConVar()
         Object.assign(cv, <ConVar>{operativo: varFound.operativo, tabla_datos: varFound.tabla_datos, variable:varFound.variable, texto:varFound.nombre });
-        cv.relacion = relation;
+        cv.relacion = relation? relation.tiene: undefined;
         return cv
     }
     buildExpresionVar(): string {

@@ -1,7 +1,7 @@
 {
   "name": "consistencias",
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": ["Raquel N Salva <raquelzssalva@gmail.com>, Eugenio Arosteguy <eugenio.arosteguy@gmail.com>, Emilio Platzer <emilioplatzer@gmail.com>"],
   "repository": "codenautas/consistencias",
@@ -13,7 +13,7 @@
     "install"
   ],
   "dependencies": {
-    "varcal": "~0.7.2"
+    "varcal": "~0.7.3"
   },
   "devDependencies": {
     "types.d.ts": "~0.4.4",
@@ -26,6 +26,7 @@
     "prepare": "npm run build",
     "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
     "build-force": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
+    "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-consistencias.js"
   },
   "qa-control": {
