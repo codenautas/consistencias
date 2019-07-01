@@ -6,7 +6,7 @@ import { Consistencia } from "./types-consistencias";
 
 var procedures = [
     {
-        action:'compilar',
+        action:'compilar_consistencia',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
@@ -24,7 +24,7 @@ var procedures = [
         }
     },
     {
-        action:'compilar_todas',
+        action:'compilar_todas_consistencias',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
@@ -47,54 +47,6 @@ var procedures = [
             } else {
                 return {ok:true, message: 'compilaron exitosamente todas las consistencias activas:' + consistenciasActivas.length};
             }
-        }
-    },
-    {
-        action:'correr',
-        parameters:[
-            {name:'operativo'  , typeName:'text', references:'operativos'},
-            {name:'consistencia'        , typeName:'text', references:'consistencias'},
-        ],
-        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
-            // correr una consistencia = consistir todos los casos en dicha consistencia
-            
-            let compiler = new ConCompiler(context.client, params.operativo);
-            await compiler.fetchDataFromDB();
-            let consistencia = compiler.myCons.find(c=>c.operativo==params.operativo && c.consistencia==params.consistencia);
-
-            if (consistencia){
-                await compiler.consistir(undefined, consistencia);
-            } else {
-                throw new Error('No se encontró la consistencia '+params.consistencia)
-            }
-            
-
-            // opcion 1
-            // Calcular todas las variables calculadas
-            // getAllCasos
-            // para cada caso
-                // consistencia.correr(id_casoStr)
-                    /*
-                    delete inconsistencias_ultimas
-                    insert inconsistencias_ultimas
-                    // actualizo inconsistencias
-                        insert inconsistencias (las nuevas)
-                        delete inconsistencias (las viejas)
-                        update justificación y just previa
-                    */
-
-
-            // opcion 2
-            // Calcular todas las variables calculadas
-            // getAllCasos
-            // delete inconsistencias_ultimas
-            // para cada caso
-                // consistencia.correr(id_casoStr)
-                    // insert inconsistencias_ultimas
-            // actualizo inconsistencias
-            // insert inconsistencias (las nuevas)
-            // delete inconsistencias (las viejas)
-            // update justificación y just previa
         }
     },
     {

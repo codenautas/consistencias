@@ -26,8 +26,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "modulo"            , typeName: "text"    },
             { name: "observaciones"         , typeName: "text"    },
             { name: "variables_de_contexto" , typeName: "text"    },
-            { name: 'compilada'             , typeName:'timestamp'   , editable:false },
-            // { name: "correr"                , typeName:'bigint' , editable:false, clientSide:'correr'}
+            { name: 'compilada'             , typeName:'timestamp'   , editable:false }
         ],
         primaryKey: ['operativo','consistencia'],
         foreignKeys:[
