@@ -3,6 +3,7 @@
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
   "version": "0.7.3",
   "author": "Codenautas <codenautas@googlegroups.com>",
+  "contributors": ["Raquel N Salva <raquelzssalva@gmail.com>, Eugenio Arosteguy <eugenio.arosteguy@gmail.com>, Emilio Platzer <emilioplatzer@gmail.com>"],
   "repository": "codenautas/consistencias",
   "license": "MIT",
   "main": "dist/server/app-consistencias.js",
