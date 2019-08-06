@@ -162,19 +162,22 @@ export class ConCompiler extends ExpressionProcessor{
         // insertar nuevas inconsistencias
         // TODO se está forzando a las últimas 3 queries a tener el alias i (para inconsistencias_ultimas sería iu)
         await this.client.query(`
-            INSERT INTO inconsistencias (operativo, consistencia, pk_integrada)
-              SELECT operativo, consistencia, pk_integrada
-                FROM inconsistencias_ultimas 
-                WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias)
-                  AND pk_integrada->>'operativo'=$1
-                  ${pkIntegradaCondition}
-        `, [this.operativo]).execute();
+          INSERT INTO inconsistencias (operativo, consistencia, pk_integrada)
+            SELECT operativo, consistencia, pk_integrada
+              FROM inconsistencias_ultimas iu
+              WHERE not exists (
+                    SELECT operativo, consistencia, pk_integrada FROM inconsistencias i 
+                      WHERE i.operativo = iu.operativo AND i.pk_integrada = iu.pk_integrada AND i.consistencia = iu.consistencia
+                  )
+                AND operativo=$1 ${pkIntegradaCondition}`, [this.operativo]).execute();
         
         // borra inconsistencias viejas
         await this.client.query(`
-            DELETE FROM inconsistencias
-              WHERE (operativo, consistencia, pk_integrada) NOT IN (select operativo, consistencia, pk_integrada FROM inconsistencias_ultimas)
-                AND pk_integrada->>'operativo'=$1 ${pkIntegradaCondition}`, [this.operativo]).execute();
+          DELETE FROM inconsistencias i
+            WHERE not exists (
+              SELECT operativo, consistencia, pk_integrada FROM inconsistencias_ultimas iu
+                WHERE iu.operativo=i.operativo and iu.consistencia=i.consistencia and iu.pk_integrada=i.pk_integrada
+            ) AND operativo=$1 ${pkIntegradaConditionConAlias}`, [this.operativo]).execute();
         
         // actualiza inconsistencias con los datos de la última corrida
         await this.client.query(`
