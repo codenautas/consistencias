@@ -193,11 +193,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     }
     private salvarFuncionInformado() {
         //TODO: sacar esto de acá
-        var regex = /\binformado\(null2zero\(([^()]+)\)\)/gi
-        function regexFunc(_x: string, centro: string) {
-            return 'informado(' + centro + ')';
-        }
-        this.clausula_where = (<string>this.clausula_where).replace(regex, regexFunc);
-
+        var regex = /\b(informado|con_dato|sin_dato|nsnc)\(null2zero\(([^()]+)\)\)/gi;
+        this.clausula_where = (<string>this.clausula_where).replace(regex,'$1($2)');
     }
 }
