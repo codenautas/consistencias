@@ -205,7 +205,6 @@ export class ConCompiler extends ExpressionProcessor{
         return 'ok';
     }
     
-    //TODO: comento para que falle y revisar las referencias a varcal_provisorio
     private async calculateVars(idCaso: string|undefined): Promise<void> {
         if(idCaso){
             await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
