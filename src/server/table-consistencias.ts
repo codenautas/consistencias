@@ -2,11 +2,12 @@
 import {TableContext,TableDefinition} from "varcal"
 
 export function consistencias(context:TableContext):TableDefinition{
-    var admin = context.user.rol === 'admin';
+    var isAdmin=context.user.rol==='admin';
+    var isProcesamiento=context.user.rol==='procesamiento' || isAdmin;
     return {
         name: 'consistencias',
         elementName: 'consistencia',
-        editable: admin,
+        editable: isProcesamiento,
         fields: [
             { name: "compilar"          , typeName:'bigint' , editable:false, clientSide:'compilar'},
             { name: "operativo"         , typeName:'text'     },

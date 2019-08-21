@@ -2,14 +2,15 @@
 import {TableContext,TableDefinition} from "varcal"
 
 export function inconsistencias(context:TableContext):TableDefinition{
-    var admin = context.user.rol === 'admin';
+    var isAdmin=context.user.rol==='admin';
+    var isProcesamiento=context.user.rol==='procesamiento' || isAdmin;
     return {
         name: 'inconsistencias',
         elementName: 'inconsistencia',
-        editable: admin,
+        editable: isProcesamiento,
         fields: [
             { name: "operativo"            , typeName:'text'     , editable: false},
-            { name: "pk_integrada"         , typeName: 'jsonb'   },
+            { name: "pk_integrada"         , typeName: 'jsonb'   , editable: false},
             { name: "consistencia"         , typeName: "text"    , editable: false },
             { name: "justificacion"        , typeName: "text" },
             { name: "justificacion_previa" , typeName: "text"    , editable: false},
