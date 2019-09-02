@@ -206,22 +206,12 @@ export class ConCompiler extends ExpressionProcessor{
     }
     
     private async calculateVars(idCaso: string|undefined): Promise<void> {
-        if(idCaso){
+        if(idCaso) {
             await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
-        }else{
-            //semaphore
-            //var now = bestGlobals.datetime.now();
-            // var now = bestGlobals.timeInterval(bestGlobals.datetime.now());
-            // if (!ConCompiler.calculatingAllVars && now.sub(ConCompiler.lastCalculateAllVars)>bestGlobals.timeInterval({ms:100000})) {
-            //     ConCompiler.calculatingAllVars = true;
-                ConCompiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
-                await ConCompiler.varCalculation;
-                // ConCompiler.calculatingAllVars = false;
-                // ConCompiler.lastCalculateAllVars = now;
-        } 
-            // }else{
-            //     await ConCompiler.varCalculation;
-            // }
+        } else {
+            //TODO: do a semaphore to allow press "compile" in several consistencias simultaneously
+            ConCompiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+            await ConCompiler.varCalculation;
+        }
     }
-
 }
