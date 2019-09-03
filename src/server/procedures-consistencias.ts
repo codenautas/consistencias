@@ -69,7 +69,7 @@ var procedures = [
         }
     },
     {
-        action:'consistir_todo',
+        action:'consistir_encuestas',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
