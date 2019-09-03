@@ -50,7 +50,7 @@ function botonClientSideEnGrilla(opts: { nombreBoton: string, llamada: (depot: m
 myOwn.clientSides.compilar = botonClientSideEnGrilla({
     nombreBoton: 'compilar y consistir',
     llamada: function (depot: myOwn.Depot) {
-        return depot.row.activa? myOwn.ajax.compilar_consistencia({
+        return depot.row.activa? myOwn.ajax.compilar_y_correr_consistencia({
             operativo: depot.row.operativo,
             consistencia: depot.row.consistencia
         }): alertPromise('Debe activar la consistencia para poder compilarla');
@@ -60,7 +60,16 @@ myOwn.clientSides.compilar = botonClientSideEnGrilla({
 myOwn.clientSides.compilarTodas = botonClientSideEnGrilla({
     nombreBoton: 'compilar todas',
     llamada: function (depot: myOwn.Depot) {
-        return myOwn.ajax.compilar_todas_consistencias({
+        return myOwn.ajax.compilar_consistencias({
+            operativo: depot.row.operativo
+        });
+    }
+});
+
+myOwn.clientSides.correrTodas= botonClientSideEnGrilla({
+    nombreBoton: 'consistir todas las encuestas',
+    llamada: function (depot: myOwn.Depot) {
+        return myOwn.ajax.consistir_encuestas({
             operativo: depot.row.operativo
         });
     }

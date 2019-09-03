@@ -59,7 +59,8 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
             }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
-                    {name: "compilar_cons" , typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'}
+                    {name: "compilar_cons", typeName: "bigint"  , editable:false, clientSide:'compilarTodas', title: 'compilar consistencias'},
+                    {name: "correr_cons"  , typeName: "bigint"  , editable:false, clientSide:'correrTodas', title: 'correr consistencias'}
                 );
             });
         }
