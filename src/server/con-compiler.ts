@@ -207,10 +207,10 @@ export class ConCompiler extends ExpressionProcessor{
     
     private async calculateVars(idCaso: string|undefined): Promise<void> {
         if(idCaso) {
-            await this.client.query(`SELECT varcal_provisorio_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
+            await this.client.query(`SELECT update_varcal_por_encuesta($1, $2)`, [this.operativo, idCaso]).execute();
         } else {
             //TODO: do a semaphore to allow press "compile" in several consistencias simultaneously
-            ConCompiler.varCalculation = this.client.query(`SELECT varcal_provisorio_total($1)`, [this.operativo]).execute();
+            ConCompiler.varCalculation = this.client.query(`SELECT update_varcal($1)`, [this.operativo]).execute();
             await ConCompiler.varCalculation;
         }
     }
