@@ -32,6 +32,26 @@ var procedures = [
         }
     },
     {
+        action:'compilar_consistencia',
+        parameters:[
+            {name:'operativo'  , typeName:'text', references:'operativos'},
+            {name:'consistencia'        , typeName:'text', references:'consistencias'},
+        ],
+        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
+            //compilar y consistir dicha consistencia (correr para todas las encuestas)
+            try{
+                let compiler = new ConCompiler(context.client, params.operativo);
+                await compiler.fetchDataFromDB();
+                
+                await compiler.compile(<Consistencia>compiler.myCons.find(c=>c.consistencia == params.consistencia));
+
+                return {ok:true, message:'consistencia compilada'};
+            }catch(error){
+                return {ok:false, message:error.message};
+            }
+        }
+    },
+    {
         action:'compilar_y_correr_consistencia',
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},

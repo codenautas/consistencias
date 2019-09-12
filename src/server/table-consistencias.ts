@@ -9,7 +9,8 @@ export function consistencias(context:TableContext):TableDefinition{
         elementName: 'consistencia',
         editable: isProcesamiento,
         fields: [
-            { name: "compilar"          , typeName:'bigint' , editable:false, clientSide:'compilar'},
+            { name: "compilar"          , typeName:'bigint' , editable:false, clientSide:'compilar_enc'},
+            { name: "consistir"         , typeName:'bigint' , editable:false, clientSide:'consistir_enc'},
             { name: "operativo"         , typeName:'text'     },
             { name: "consistencia"      , typeName: "text"    },
             { name: "precondicion"      , typeName: "text"    },
