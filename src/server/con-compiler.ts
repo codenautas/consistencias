@@ -1,4 +1,4 @@
-import { ExpressionProcessor, IExpressionContainer, Variable, quoteIdent, quoteLiteral, ResultCommand, Consistencia, ConVar } from "./types-consistencias";
+import { ExpressionProcessor, Variable, quoteIdent, quoteLiteral, ResultCommand, Consistencia, ConVar } from "./types-consistencias";
 import { hasAlias, getAlias } from "varcal";
 
 export class ConCompiler extends ExpressionProcessor{
@@ -30,8 +30,8 @@ export class ConCompiler extends ExpressionProcessor{
         con.setClausulaWhere();   
     }
 
-    protected buildClausulaFrom(ec:IExpressionContainer): string {
-        return this.buildInsumosTDsFromClausule(ec.orderedInsumosTDNames) + this.buildOptRelationsFromClausule(ec.insumosOptionalRelations);
+    protected buildClausulaFrom(con:Consistencia): string {
+        return 'FROM ' + this.buildEndToEndJoins(con.lastTD.tabla_datos) + this.buildOptRelationsFromClausule(con.insumosOptionalRelations);
     }
 
     /**

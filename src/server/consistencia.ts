@@ -61,7 +61,6 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     expresionProcesada: string = '';
     insumos!: EP.Insumos; 
     
-    orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = []
     lastTD!:TablaDatos
 
