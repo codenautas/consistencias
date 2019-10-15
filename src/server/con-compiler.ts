@@ -145,16 +145,19 @@ export class ConCompiler extends ExpressionProcessor{
         let esto = this;
         var cdpConsistir = Promise.resolve();
         // se corre cada consistencia
-        consistencias.filter(c=>c.activa && c.valida).forEach(function(consistencia){
+        consistencias.filter(con=>con.activa && con.valida).forEach(function(con){
             cdpConsistir = cdpConsistir.then(async function(){
-                let misConVars = esto.myConVars.filter((cv:ConVar)=>cv.consistencia==consistencia.consistencia);
+                let misConVars = esto.myConVars.filter((cv:ConVar)=>cv.consistencia==con.consistencia);
                 // insert en inconsistencias_ultimas
-                let query= `
-                    INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores)
-                      ${consistencia.getCompleteQuery(misConVars)}
-                        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=$1
-                        ${mainTDCondition}`;
-                await esto.client.query(query ,[esto.operativo]).execute();
+                const selectForInsert = 
+                    `${con.getCompleteQuery(misConVars)} AND ${quoteIdent(ConCompiler.mainTD)}.operativo=$1 ${mainTDCondition}`;
+                const inconsToInsertResult = await esto.client.query(selectForInsert ,[esto.operativo]).execute();
+                const enabledInconLimit = 450;
+                if (inconsToInsertResult.rowCount > enabledInconLimit) {
+                    throw new Error(`La consistencia ${con} arrojará mas de ${enabledInconLimit} inconsistencias.`);
+                }
+                await esto.client.query(`INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores) ${selectForInsert}` 
+                    ,[esto.operativo]).execute();
             })
         })
         await cdpConsistir;
