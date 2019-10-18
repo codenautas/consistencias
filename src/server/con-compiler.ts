@@ -154,7 +154,7 @@ export class ConCompiler extends ExpressionProcessor{
                 const inconsToInsertResult = await esto.client.query(selectForInsert ,[esto.operativo]).execute();
                 const enabledInconLimit = 450;
                 if (inconsToInsertResult.rowCount > enabledInconLimit) {
-                    throw new Error(`La consistencia ${con} arrojará mas de ${enabledInconLimit} inconsistencias.`);
+                    throw new Error(`La consistencia ${con.consistencia} arrojará mas de ${enabledInconLimit} inconsistencias.`);
                 }
                 await esto.client.query(`INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores) ${selectForInsert}` 
                     ,[esto.operativo]).execute();
