@@ -28,8 +28,8 @@
   },
   "scripts": {
     "prepare": "npm run build",
-    "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
-    "build-force": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
+    "build-strict": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
+    "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-consistencias.js"
   },
