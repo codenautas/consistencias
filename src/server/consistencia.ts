@@ -157,7 +157,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
           ${this.clausula_where}`;
     }
 
-    // TODO: check this functions to pass to ConCompiler (or VarCalculator)
+    // TODO: check this functions to move it to ConCompiler (or VarCalculator)
     private getSelectFields(conVars: ConVar[]): string {
         return `${quoteLiteral(this.operativo)},
             ${quoteLiteral(this.consistencia)},
