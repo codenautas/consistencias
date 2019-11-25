@@ -119,9 +119,9 @@ export class ConCompiler extends ExpressionProcessor{
         let mainTDCondition = '';
         let pkIntegradaCondition = '';
         let pkIntegradaConditionConAlias = '';
-        // let updateMainTDCondition = '';
+         let updateMainTDCondition = '';
         if(idCaso){
-            // updateMainTDCondition = `AND ${quoteIdent(ConCompiler.mainTDPK)} = ${quoteLiteral(idCaso)}`;
+            updateMainTDCondition = `AND ${quoteIdent(ConCompiler.mainTDPK)} = ${quoteLiteral(idCaso)}`;
             mainTDCondition = `AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
@@ -196,15 +196,15 @@ export class ConCompiler extends ExpressionProcessor{
             ${pkIntegradaConditionConAlias}
         `, [this.operativo]).execute();
 
-        // if(! consistenciaACorrer) {
-        //     // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
-        //     await this.client.query(`
-        //     UPDATE ${quoteIdent(ConCompiler.mainTD)}
-        //       SET consistido=current_timestamp
-        //       WHERE operativo = $1
-        //     ${updateMainTDCondition}
-        //     `, [this.operativo]).execute();
-        // }
+        if(! consistenciaACorrer) {
+            // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
+            await this.client.query(`
+            UPDATE ${quoteIdent(ConCompiler.mainTD)}
+              SET consistido=current_timestamp
+              WHERE operativo = $1
+            ${updateMainTDCondition}
+            `, [this.operativo]).execute();
+        }
         return 'ok';
     }
     
