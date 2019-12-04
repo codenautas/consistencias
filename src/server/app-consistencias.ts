@@ -63,6 +63,9 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
                     {name: "correr_cons"  , typeName: "bigint"  , editable:false, clientSide:'correrTodas', title: 'correr consistencias'}
                 );
             });
+            this.appendToTableDefinition('variables', function(tableDef){
+                tableDef.detailTables.push({ table: 'con_var', fields: ['operativo', 'variable'], abr: 'C', label: 'consistencias' });
+            });
         }
     }
 }
