@@ -31,7 +31,7 @@ export class ConCompiler extends ExpressionProcessor{
     }
 
     protected buildClausulaFrom(con:Consistencia): string {
-        return 'FROM ' + this.buildEndToEndJoins(con.lastTD.tabla_datos) + this.buildOptRelationsFromClausule(con.insumosOptionalRelations);
+        return 'FROM ' + this.buildEndToEndJoins(con.tdsNeedByExpression) + this.buildOptRelationsFromClausule(con.insumosOptionalRelations);
     }
 
     /**
