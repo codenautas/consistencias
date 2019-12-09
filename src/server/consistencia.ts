@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { ConCompiler } from "./con-compiler";
-import { IExpressionContainer, Relacion, TablaDatos, Client, quoteIdent, quoteLiteral, quoteNullable, ConVar } from "./types-consistencias";
+import { IExpressionContainer, Relacion, Client, quoteIdent, quoteLiteral, quoteNullable, ConVar } from "./types-consistencias";
 
 export interface ConsistenciaDB {
     operativo: string
@@ -11,6 +11,8 @@ export interface ConsistenciaDB {
     clausula_from?: string
     clausula_where?: string
     campos_pk?: string // se guardan las pks (con alias) de los TDs involucrados en los insumos
+    first_td?: string
+    last_td?: string
     error_compilacion?: string
     valida?: boolean
     explicacion?: string
@@ -43,6 +45,8 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     error_compilacion?: string
     clausula_from?:string
     clausula_where?:string
+    first_td?: string
+    last_td?: string
     valida?: boolean
     explicacion?: string
     falsos_positivos?: boolean
@@ -55,14 +59,12 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
 
     insumosConVars:ConVar[] = [];
 
-    // complexExp:complexExpression
     tdsNeedByExpression: string[]= [];
 
     expresionProcesada: string = '';
     insumos!: EP.Insumos; 
     
     insumosOptionalRelations: Relacion[] = []
-    lastTD!:TablaDatos
 
     static async fetchOne(client: Client, op: string, con: string): Promise<Consistencia> {
         let result = await client.query(`SELECT * FROM consistencias c WHERE c.operativo = $1 AND c.consistencia = $2`, [op, con]).fetchUniqueRow();
@@ -104,9 +106,8 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     private cleanAll() {
         // clean consistencia
         this.valida = false;
-        this.compilada = this.error_compilacion = undefined;
-        this.campos_pk = this.clausula_from = this.clausula_where = undefined;
-
+         this.compilada = this.error_compilacion = this.campos_pk = this.clausula_from = 
+            this.clausula_where = this.first_td = this.last_td = undefined;
         // clean con vars to insert
         this.insumosConVars = [];
     }
@@ -137,7 +138,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y consistencia=$2
         let conUpdateQuery = `UPDATE consistencias SET 
             compilada=${this.compilada ? 'current_timestamp' : 'null'},
-            ${fieldsToUpdate.map((fieldName, index) => `${quoteIdent(fieldName)}=$${index + 3}`).join(', ')}
+            ${fieldsToUpdate.map((fieldName, index) => `${quoteIdent(fieldName)}=$${index + basicParams.length+1}`).join(', ')}
             WHERE operativo=$1 AND consistencia=$2`;
         let params = basicParams.concat(fieldsToUpdate.map(f => esto[f]));
         await client.query(conUpdateQuery, params).execute();

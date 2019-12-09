@@ -25,7 +25,7 @@ export class ConCompiler extends ExpressionProcessor{
         // TODO: agregar validación de funciones de agregación, esto es: si la consistencia referencia variables de tablas mas específicas (personas)
         // pero lo hace solo con funciones de agregación, entonces, los campos pk son solo de la tabla mas general, y no de la específica
         // TODO: separar internas de sus calculadas y que el último TD se tome de las internas 
-        con.campos_pk = con.lastTD.getPKsWitAlias().join(',');
+        con.campos_pk = this.getLastTD(con).getPKsWitAlias().join(',');
         con.clausula_from = this.buildClausulaFrom(con);
         con.setClausulaWhere();   
     }
@@ -64,7 +64,7 @@ export class ConCompiler extends ExpressionProcessor{
     prepareEC(con:Consistencia): any {
         con.prepare();
         super.prepareEC(con);
-        con.expresionProcesada = this.getWrappedExpression(con.expresionProcesada, con.lastTD.getQuotedPKsCSV());
+        con.expresionProcesada = this.getWrappedExpression(con.expresionProcesada, this.getLastTD(con).getQuotedPKsCSV());
         this.pushAllInConVars(con);
     }
 
@@ -88,17 +88,17 @@ export class ConCompiler extends ExpressionProcessor{
 
     private async testBuiltSQL(con:Consistencia) {
         // TODO: deshardcodear id_caso de todos lados y operativo también! Pero pidió Emilio que se haga después 
-        let selectQuery = this.getCompleteQuery(con);
+        let selectQuery = this.getConsistenciaQueryToTest(con);
         var result = await this.client.query('select try_sql($1) as error_informado', [selectQuery]).fetchOneRowIfExists();
         if(result.row.error_informado){
             throw new Error(result.row.error_informado);
         }
     }
 
-    getCompleteQuery(con: Consistencia): string {
-        return `${con.getCompleteQuery(con.insumosConVars)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.operativo=${quoteLiteral(this.operativo)}
-        AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}='-1'`
+    private getConsistenciaQueryToTest(con: Consistencia): string {
+        return con.getCompleteQuery(con.insumosConVars) +
+            ` AND ${quoteIdent(<string>con.first_td)}.${quoteIdent(this.getFirstTD(con).pks[0])} is null`
+        //`AND ${quoteIdent(con.firstTD.tabla_datos)}.${quoteIdent(con.firstTD.)}='-1'`
     }
     
     async compileAndRun(conName:string): Promise<void> {
@@ -116,13 +116,11 @@ export class ConCompiler extends ExpressionProcessor{
         //se verifica si vino idCaso
         //TODO generalizar con mainTD y deshardcodear id_caso
         // y cuando se generalice tener en cuenta que pueden ser mas de una pk (hoy es solo una mainTDPK)
-        let mainTDCondition = '';
         let pkIntegradaCondition = '';
         let pkIntegradaConditionConAlias = '';
-         let updateMainTDCondition = '';
+        let updateMainTDCondition = '';
         if(idCaso){
             updateMainTDCondition = `AND ${quoteIdent(ConCompiler.mainTDPK)} = ${quoteLiteral(idCaso)}`;
-            mainTDCondition = `AND ${quoteIdent(ConCompiler.mainTD)}.${quoteIdent(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaCondition = `AND pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
             pkIntegradaConditionConAlias = `AND i.pk_integrada->>${quoteLiteral(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`;
         }
@@ -142,15 +140,19 @@ export class ConCompiler extends ExpressionProcessor{
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
         
+        let mainTDCondition;
         let esto = this;
         var cdpConsistir = Promise.resolve();
         // se corre cada consistencia
         consistencias.filter(con=>con.activa && con.valida).forEach(function(con){
             cdpConsistir = cdpConsistir.then(async function(){
+
+                mainTDCondition = idCaso? `AND ${quoteIdent(<string>con.first_td)}.${quoteIdent(ConCompiler.mainTDPK)}=${quoteLiteral(idCaso)}`: '';
+
                 let misConVars = esto.myConVars.filter((cv:ConVar)=>cv.consistencia==con.consistencia);
                 // insert en inconsistencias_ultimas
                 const selectForInsert = 
-                    `${con.getCompleteQuery(misConVars)} AND ${quoteIdent(ConCompiler.mainTD)}.operativo=$1 ${mainTDCondition}`;
+                    `${con.getCompleteQuery(misConVars)} AND ${quoteIdent(<string>con.first_td)}.operativo=$1 ${mainTDCondition}`;
                 const inconsToInsertResult = await esto.client.query(selectForInsert ,[esto.operativo]).execute();
                 const enabledInconLimit = 450;
                 if (inconsToInsertResult.rowCount > enabledInconLimit) {

@@ -18,6 +18,8 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "activa"            , typeName: "boolean" , nullable:false },
             { name: "clausula_from"     , typeName: "text"    , visible:false, editable:false},
             { name: "clausula_where"    , typeName: "text"    , visible:false, editable:false},
+            { name: "first_td"          , typeName: "text"    , visible:false, editable:false},
+            { name: "last_td"           , typeName: "text"    , visible:false, editable:false},
             { name: "campos_pk"         , typeName: "text"    , visible:false, editable:false},
             { name: "error_compilacion" , typeName: "text"    , editable:false},
             { name: "valida"            , typeName: "boolean" , editable:false},

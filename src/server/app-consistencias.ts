@@ -64,6 +64,9 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
                 );
             });
             this.appendToTableDefinition('variables', function(tableDef){
+                if (!tableDef.detailTables) {
+                    tableDef.detailTables = [];
+                }
                 tableDef.detailTables.push({ table: 'con_var', fields: ['operativo', 'variable'], abr: 'C', label: 'consistencias' });
             });
         }
