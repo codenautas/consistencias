@@ -33,7 +33,7 @@
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-consistencias.js",
     "clink": "npm prune && npm i && npm run build && npm link varcal && npm run build",
-    "git-commit": "git add package.json && git commit -m \"upgrading stack dependencies\"",
+    "git-commit": "git add package.json && (git commit -m \"upgrading stack dependencies\" || true)",
     "publish-stack": "npm version patch && ncu -u && npm run git-commit && npm publish && git push"
   },
   "qa-control": {
