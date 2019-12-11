@@ -1,6 +1,6 @@
 "use strict";
 
-import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request } from "varcal";
+import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request, OptsClientPage } from "varcal";
 import { procedures } from "./procedures-consistencias";
 import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
@@ -23,7 +23,7 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
             return parentProc.concat(procedures);
         }
 
-        clientIncludes(req:Request, hideBEPlusInclusions?:boolean){
+        clientIncludes(req:Request, hideBEPlusInclusions:OptsClientPage){
             return super.clientIncludes(req, hideBEPlusInclusions).concat([
                 {type:'js', module: 'consistencias', modPath: '../client', file: 'consistencias.js', path: 'client_modules'}
             ])
