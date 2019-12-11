@@ -32,7 +32,7 @@
     "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-consistencias.js",
-    "clink": "npm prune && npm run build && npm link varcal && npm run build",
+    "clink": "npm prune && npm i && npm run build && npm link varcal && npm run build",
     "git-commit": "git add package.json && git commit -m \"upgrading stack dependencies\"",
     "publish-stack": "npm version patch && ncu -u && npm run git-commit && npm publish && git push"
   },
