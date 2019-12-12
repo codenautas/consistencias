@@ -133,7 +133,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         }
 
         // update consistencias query
-        let fieldsToUpdate = ['valida', 'campos_pk', 'clausula_from', 'clausula_where', 'error_compilacion'];
+        let fieldsToUpdate = ['valida', 'campos_pk', 'clausula_from', 'clausula_where', 'first_td', 'last_td', 'error_compilacion'];
         let esto: any = this; //TODO: ver porque tuvimos que poner tipo any a 'be' para que no falle el map
         // en lugar de ='be[f]' usamos $i+3, el +3 es debido a que operativo=$1 y consistencia=$2
         let conUpdateQuery = `UPDATE consistencias SET 
