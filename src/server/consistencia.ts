@@ -59,7 +59,7 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
 
     insumosConVars:ConVar[] = [];
 
-    tdsNeedByExpression: string[]= [];
+    tdsInvolvedInExpr: string[]= [];
 
     expresionProcesada: string = '';
     insumos!: EP.Insumos; 
