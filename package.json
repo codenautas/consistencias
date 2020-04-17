@@ -1,7 +1,7 @@
 {
   "name": "consistencias",
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
-  "version": "0.7.18",
+  "version": "0.7.20",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": [
     "Raquel N Salva <raquelzssalva@gmail.com>",
@@ -17,10 +17,10 @@
     "install"
   ],
   "dependencies": {
-    "varcal": "~0.7.14"
+    "varcal": "~0.7.20"
   },
   "devDependencies": {
-    "types.d.ts": "~0.4.14",
+    "types.d.ts": "~0.4.15",
     "mixin-patch": "~0.3.3"
   },
   "engines": {
