@@ -6,5 +6,5 @@
     "include":[
         "."
     ],
-    "extends": "../../tsconfig-common.json"
+    "extends": "../tsconfig-common.json"
 }
