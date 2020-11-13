@@ -17,10 +17,10 @@
     "install"
   ],
   "dependencies": {
-    "varcal": "^1.0.0"
+    "varcal": "^1.0.3"
   },
   "devDependencies": {
-    "types.d.ts": "~0.4.15",
+    "types.d.ts": "~0.5.0",
     "mixin-patch": "~0.3.3"
   },
   "engines": {
