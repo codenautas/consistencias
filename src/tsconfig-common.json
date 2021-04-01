@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "declaration": true,
         "outDir": "x:\\this-dir-must-not-be-created",
         "inlineSourceMap": true,
         "inlineSources": true,
