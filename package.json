@@ -20,8 +20,8 @@
     "varcal": "^1.3.5"
   },
   "devDependencies": {
-    "types.d.ts": "~0.6.4",
-    "mixin-patch": "~0.3.7"
+    "types.d.ts": "~0.6.7",
+    "mixin-patch": "~0.4.0"
   },
   "engines": {
     "node": ">= 14.0.0"
