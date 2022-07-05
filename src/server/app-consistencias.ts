@@ -11,6 +11,8 @@ import {defConfig} from "./def-config";
 
 export * from "./types-consistencias";
 
+export var disableVarcal=undefined;
+
 export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Base:T){
     
     return class AppConsistencias extends Base{
@@ -45,6 +47,11 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
                 }
             ];
             return {menu: super.getMenu().menu.concat(myMenuPart)}
+        }
+
+        async postConfig(){
+            await super.postConfig();
+            disableVarcal = this.config.disableVarcal;
         }
 
         prepareGetTables(){

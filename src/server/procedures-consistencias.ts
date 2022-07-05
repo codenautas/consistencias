@@ -46,7 +46,7 @@ var procedures = [
                 await compiler.compile(<Consistencia>compiler.myCons.find(c=>c.consistencia == params.consistencia));
 
                 return {ok:true, message:'consistencia compilada'};
-            }catch(error){
+            }catch(error:any){
                 return {ok:false, message:error.message};
             }
         }
@@ -65,7 +65,7 @@ var procedures = [
                 await compiler.compileAndRun(params.consistencia);
 
                 return {ok:true, message:'consistencia compilada y consistida'};
-            }catch(error){
+            }catch(error:any){
                 return {ok:false, message:error.message};
             }
         }
@@ -83,7 +83,7 @@ var procedures = [
                 await compiler.fetchDataFromDB();
                 await compiler.consistir(parameters.id_caso);
                 return {ok:true, message:'Encuesta consistida'};
-            }catch(error){
+            }catch(error:any){
                 return {ok:false, message:error.message};
             }
         }
@@ -99,7 +99,7 @@ var procedures = [
                 await compiler.fetchDataFromDB();
                 await compiler.consistir();
                 return {ok:true, message:'Se consistieron todas la encuestas'};
-            }catch(error){
+            }catch(error:any){
                 return {ok:false, message:error.message};
             }
         }

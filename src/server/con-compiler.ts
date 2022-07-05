@@ -1,5 +1,6 @@
 import { ExpressionProcessor, Variable, quoteIdent, quoteLiteral, ResultCommand, Consistencia, ConVar } from "./types-consistencias";
 import { hasAlias, getAlias } from "varcal";
+import { disableVarcal } from "./app-consistencias";
 
 export class ConCompiler extends ExpressionProcessor{
     
@@ -52,7 +53,7 @@ export class ConCompiler extends ExpressionProcessor{
             this.buildSQLExpression(con);
             await this.testBuiltSQL(con);
             con.markAsValid();
-        } catch (error) {
+        } catch (error:any) {
             con.compilationFails(error);
         }
         finally {
@@ -135,7 +136,9 @@ export class ConCompiler extends ExpressionProcessor{
         }
         
         // client query (await this.calculate(idCaso))
-        await this.calculateVars(idCaso);
+        if ( ! disableVarcal){
+            await this.calculateVars(idCaso);
+        }
 
         // Delete all inconsistencias_ultimas
         await this.client.query(`DELETE FROM inconsistencias_ultimas WHERE operativo=$1 ${pkIntegradaCondition} ${consistenciaCondition}`, [this.operativo]).execute();
