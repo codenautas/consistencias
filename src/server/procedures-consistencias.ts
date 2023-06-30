@@ -1,6 +1,6 @@
 "use strict";
 
-import { ProcedureContext, coreFunctionParameters } from "varcal";
+import { CoreFunctionParameters, ProcedureContext } from "varcal";
 import { ConCompiler } from "./con-compiler";
 import { Consistencia } from "./types-consistencias";
 
@@ -10,7 +10,7 @@ var procedures = [
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
             let compiler = new ConCompiler(context.client, params.operativo);
             await compiler.fetchDataFromDB();
             let cons = await Consistencia.fetchAll(context.client, params.operativo);
