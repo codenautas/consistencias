@@ -37,7 +37,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
             //compilar y consistir dicha consistencia (correr para todas las encuestas)
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
@@ -57,7 +57,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
             //compilar y consistir dicha consistencia (correr para todas las encuestas)
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
@@ -76,7 +76,7 @@ var procedures = [
             {name:'operativo', typeName:'text'},
             {name:'id_caso'  , typeName:'text'}
         ],
-        coreFunction:async function(context:ProcedureContext, parameters:coreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, parameters:CoreFunctionParameters){
             // consistir_encuesta := correr todas las consistencias para dicha encuesta
             try{
                 let compiler = new ConCompiler(context.client, parameters.operativo);
@@ -93,7 +93,7 @@ var procedures = [
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: coreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
                 await compiler.fetchDataFromDB();
