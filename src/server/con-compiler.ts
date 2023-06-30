@@ -201,8 +201,8 @@ export class ConCompiler extends ExpressionProcessor{
             ${pkIntegradaConditionConAlias}
         `, [this.operativo]).execute();
 
-        if(! consistenciaACorrer) {
-            // actualiza campo consistido de grupo_personas solo si se corren todas las consistencias
+        if(! consistenciaACorrer && ConCompiler.mainTD) {
+            // actualiza campo consistido de mainTD solo si se corren todas las consistencias
             await this.client.query(`
             UPDATE ${quoteIdent(ConCompiler.mainTD)}
               SET consistido=current_timestamp

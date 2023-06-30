@@ -1,6 +1,6 @@
 import * as EP from "expre-parser";
 import { ConCompiler } from "./con-compiler";
-import { IExpressionContainer, Relacion, Client, quoteIdent, quoteLiteral, quoteNullable, ConVar } from "./types-consistencias";
+import { IExpressionContainer, Relacion, Client, quoteIdent, quoteLiteral, quoteNullable, ConVar, ExpressionProcessor } from "./types-consistencias";
 
 export interface ConsistenciaDB {
     operativo: string
@@ -187,13 +187,11 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
         let [alias, field] = campoConAlias.split('.');
         return `${quoteLiteral(field)}, ${quoteIdent(alias)}.${quoteIdent(field)}`
     }
+
     setClausulaWhere() {
         this.clausula_where = `WHERE ${this.expresionProcesada}`;
-        this.salvarFuncionInformado();
+        let instanceObj = <ExpressionProcessor>ConCompiler.instanceObj
+        this.clausula_where = instanceObj.removeNull2ZeroWrapper(this.clausula_where)
     }
-    private salvarFuncionInformado() {
-        //TODO: sacar esto de acá
-        var regex = /\b(informado|con_dato|sin_dato|nsnc)\(null2zero\(([^()]+)\)\)/gi;
-        this.clausula_where = (<string>this.clausula_where).replace(regex,'$1($2)');
-    }
+
 }
