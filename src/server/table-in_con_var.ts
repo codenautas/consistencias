@@ -17,7 +17,7 @@ export function in_con_var(context:TableContext):TableDefinition{
         ],
         primaryKey: ['operativo','consistencia','pk_integrada','tabla_datos', 'variable'],
         foreignKeys:[
-            {references:'inconsistencias', fields:['operativo', 'consistencia', 'pk_integrada']}
+            {references:'inconsistencias', fields:['operativo', 'consistencia', 'pk_integrada'], onDelete: 'cascade'}
         ],
     }
 }

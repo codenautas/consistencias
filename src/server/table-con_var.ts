@@ -17,7 +17,7 @@ export function con_var():TableDefinition{
         ],
         primaryKey: ['operativo','consistencia', 'expresion_var'],
         foreignKeys:[
-            {references:'consistencias', fields:['operativo', 'consistencia']},
+            {references:'consistencias', fields:['operativo', 'consistencia'], onDelete: 'cascade'},
             {references:'variables', fields:['operativo', 'tabla_datos','variable']}
             //TODO: agregar un fk de campo relacion a tabla relaciones
         ],
