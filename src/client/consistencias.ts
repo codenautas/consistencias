@@ -79,7 +79,7 @@ myOwn.clientSides.compilarTodas = botonClientSideEnGrilla({
 myOwn.clientSides.correrTodas= botonClientSideEnGrilla({
     nombreBoton: 'consistir todas las encuestas',
     llamada: function (depot: myOwn.Depot) {
-        return myOwn.ajax.consistir_encuestas({
+        return myOwn.ajax.compilar_y_correr_todas_las_consistencia({
             operativo: depot.row.operativo
         });
     }
