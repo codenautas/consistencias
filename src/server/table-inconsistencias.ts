@@ -4,7 +4,7 @@ import {TableContext,TableDefinition} from "varcal"
 export function inconsistencias(context:TableContext):TableDefinition{
     var isAdmin = context.user.rol === 'admin';
     var isProcesamiento = context.user.rol === 'procesamiento' || isAdmin;
-    var def = {
+    var def:TableDefinition = {
         name: 'inconsistencias',
         elementName: 'inconsistencia',
         editable: isProcesamiento,
