@@ -11,7 +11,7 @@ export class ConCompiler extends ExpressionProcessor{
     // static lastCalculateAllVars: any = bestGlobals.timeInterval(bestGlobals.datetime.now()).sub(bestGlobals.timeInterval({seconds:60}));
     tmpConVars: ConVar[] = [];
     static varCalculation: Promise<ResultCommand>;
-
+    static enabledInconLimit: number;
     
     //static lastCalculateAllVars: any = bestGlobals.datetime.now().sub(bestGlobals.timeInterval({seconds:60}));
    
@@ -157,7 +157,7 @@ export class ConCompiler extends ExpressionProcessor{
                 const selectForInsert = 
                     `${con.getCompleteQuery(misConVars)} AND ${quoteIdent(<string>con.first_td)}.operativo=$1 ${mainTDCondition}`;
                 const inconsToInsertResult = await esto.client.query(selectForInsert ,[esto.operativo]).execute();
-                const enabledInconLimit = 450;
+                const enabledInconLimit = ConCompiler.enabledInconLimit || 2500;
                 if (inconsToInsertResult.rowCount > enabledInconLimit) {
                     throw new Error(`La consistencia ${con.consistencia} arrojará mas de ${enabledInconLimit} inconsistencias.`);
                 }
@@ -190,7 +190,7 @@ export class ConCompiler extends ExpressionProcessor{
         // actualiza inconsistencias con los datos de la última corrida
         await this.client.query(`
         UPDATE inconsistencias i 
-          SET vigente=true, corrida=current_timestamp, incon_valores=iu.incon_valores,
+          SET corrida=current_timestamp, incon_valores=iu.incon_valores,
             justificacion = CASE WHEN i.incon_valores=iu.incon_valores THEN i.justificacion ELSE null END,
             justificacion_previa = CASE WHEN (i.incon_valores=iu.incon_valores OR i.justificacion is NULL) THEN i.justificacion_previa ELSE i.justificacion END
           FROM inconsistencias_ultimas iu
