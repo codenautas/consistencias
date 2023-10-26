@@ -79,7 +79,12 @@ myOwn.clientSides.compilarTodas = botonClientSideEnGrilla({
 myOwn.clientSides.correrTodas= botonClientSideEnGrilla({
     nombreBoton: 'consistir todas las encuestas',
     llamada: function (depot: myOwn.Depot) {
-        return myOwn.ajax.compilar_y_correr_todas_las_consistencia({
+        //TODO:
+        // el procedure consistir_encuestas no guarda la justificación en justificación previa
+        // el procedure compilar_y_correr_todas_las_consistencia finaliza sin errores pero luego falla node y se cae la app
+        
+        // return myOwn.ajax.compilar_y_correr_todas_las_consistencia({
+        return myOwn.ajax.consistir_encuestas({
             operativo: depot.row.operativo
         });
     }

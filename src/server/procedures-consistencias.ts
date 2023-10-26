@@ -70,24 +70,23 @@ var procedures = [
             }
         }
     },    
-    {
-        action:'compilar_y_correr_todas_las_consistencia',
-        parameters:[
-            {name:'operativo'  , typeName:'text', references:'operativos'},
-            {name:'consistencia'        , typeName:'text', references:'consistencias'},
-        ],
-        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
-            try{
-                let compiler = new ConCompiler(context.client, params.operativo);
-                await compiler.fetchDataFromDB();
-                compiler.myCons.forEach(async c=> {await compiler.compileAndRun(c.consistencia)})
+    // {
+    //     action:'compilar_y_correr_todas_las_consistencia',
+    //     parameters:[
+    //         {name:'operativo'  , typeName:'text', references:'operativos'}
+    //     ],
+    //     coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+    //         try{
+    //             let compiler = new ConCompiler(context.client, params.operativo);
+    //             await compiler.fetchDataFromDB();
+    //             compiler.myCons.forEach(async c=> {await compiler.compileAndRun(c.consistencia)})
 
-                return {ok:true, message:'todas las consistencias compiladas y consistidas en todos los casos'};
-            }catch(error:any){
-                return {ok:false, message:error.message};
-            }
-        }
-    },
+    //             return {ok:true, message:'todas las consistencias compiladas y consistidas en todos los casos'};
+    //         }catch(error:any){
+    //             return {ok:false, message:error.message};
+    //         }
+    //     }
+    // },
     {
         action:'consistir_encuesta',
         parameters:[
@@ -106,22 +105,22 @@ var procedures = [
             }
         }
     },
-    // {
-    //     action:'consistir_encuestas',
-    //     parameters:[
-    //         {name:'operativo'  , typeName:'text', references:'operativos'},
-    //     ],
-    //     coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
-    //         try{
-    //             let compiler = new ConCompiler(context.client, params.operativo);
-    //             await compiler.fetchDataFromDB();
-    //             await compiler.consistir();
-    //             return {ok:true, message:'Se consistieron todas la encuestas'};
-    //         }catch(error:any){
-    //             return {ok:false, message:error.message};
-    //         }
-    //     }
-    // }
+    {
+        action:'consistir_encuestas',
+        parameters:[
+            {name:'operativo'  , typeName:'text', references:'operativos'}
+        ],
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+            try{
+                let compiler = new ConCompiler(context.client, params.operativo);
+                await compiler.fetchDataFromDB();
+                await compiler.consistir();
+                return {ok:true, message:'Se consistieron todas la encuestas'};
+            }catch(error:any){
+                return {ok:false, message:error.message};
+            }
+        }
+    }
 ];
 
 export { procedures };
