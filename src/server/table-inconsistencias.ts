@@ -41,15 +41,6 @@ export function inconsistencias(context:TableContext):TableDefinition{
         //     { table: 'in_con_var', fields: ['operativo', 'consistencia', 'pk_integrada'], abr: 'cv', label: 'in con vars' }
         // ]
     };
-    def.fields=[
-        def.fields[0],
-        def.fields[1],
-        {name: "comp",  typeName: 'text',  clientSide:'verCaso', editable: false },
-        {name: "infe", typeName: 'text', clientSide:'verViejo', editable: false },
-        {name: "cod_causa", typeName: 'text', clientSide:'verCausa', editable: false },
-        {name: "domi", typeName: 'text', clientSide:'verDomicilio', editable: false },
-        ...def.fields.slice(2),
-    ];
     return def;
 }
 
