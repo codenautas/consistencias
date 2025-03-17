@@ -35,7 +35,7 @@ export function consistencias(context:TableContext):TableDefinition{
         primaryKey: ['operativo','consistencia'],
         foreignKeys:[
             {references:'operativos'            , fields:['operativo']},
-            {references:'momento_consistencias' , fields:['operativo','momento']},
+            {references:'momentos_consistencia' , fields:['operativo','momento']},
         ],
         detailTables: [
             { table: 'inconsistencias', fields: ['operativo', 'consistencia'], abr: 'I', label: 'Inconsistencias' },

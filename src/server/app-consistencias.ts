@@ -2,7 +2,7 @@
 
 import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request, OptsClientPage } from "varcal";
 import { procedures } from "./procedures-consistencias";
-import { momentos_consistencia } from "./table-momento_consistencias";
+import { momentos_consistencia } from "./table-momentos_consistencia";
 import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
 import { inconsistencias } from "./table-inconsistencias";

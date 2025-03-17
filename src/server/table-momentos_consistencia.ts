@@ -13,10 +13,7 @@ export function momentos_consistencia(context:TableContext):TableDefinition{
             { name: "momento"           , typeName: "text"    },
             { name: "descripcion"       , typeName: "text"    },
         ],
-        primaryKey: ['operativo','momento'],
-        detailTables: [
-            { table: 'consistencias', fields: ['operativo', 'momento'], abr: 'C', label: 'M' },
-        ]
+        primaryKey: ['operativo','momento']
     }
 }
 
