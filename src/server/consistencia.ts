@@ -17,7 +17,7 @@ export interface ConsistenciaDB {
     valida?: boolean
     explicacion?: string
     falsos_positivos?: boolean
-    momento?: string
+    momento: string
     tipo?: string
     modulo?: string
     observaciones?: string
@@ -50,7 +50,8 @@ export class Consistencia implements ConsistenciaDB, IExpressionContainer{
     valida?: boolean
     explicacion?: string
     falsos_positivos?: boolean
-    momento?: string
+    // @ts-ignore https://github.com/codenautas/operativos/issues/4
+    momento: string
     tipo?: string
     modulo?: string
     observaciones?: string

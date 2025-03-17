@@ -25,7 +25,7 @@ export function consistencias(context:TableContext):TableDefinition{
             { name: "valida"            , typeName: "boolean" , editable:false},
             { name: "explicacion"       , typeName: "text"    , isName:true},
             { name: "falsos_positivos"  , typeName: "boolean"    },
-            { name: "momento"           , typeName: "text"    },
+            { name: "momento"           , typeName: "text"    , nullable:false},
             { name: "tipo"              , typeName: "text"    },
             { name: "modulo"            , typeName: "text"    },
             { name: "observaciones"         , typeName: "text"    },
@@ -34,7 +34,8 @@ export function consistencias(context:TableContext):TableDefinition{
         ],
         primaryKey: ['operativo','consistencia'],
         foreignKeys:[
-            {references:'operativos', fields:['operativo']},
+            {references:'operativos'            , fields:['operativo']},
+            {references:'momento_consistencias' , fields:['operativo','momento']},
         ],
         detailTables: [
             { table: 'inconsistencias', fields: ['operativo', 'consistencia'], abr: 'I', label: 'Inconsistencias' },

@@ -2,6 +2,7 @@
 
 import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request, OptsClientPage } from "varcal";
 import { procedures } from "./procedures-consistencias";
+import { momentos_consistencia } from "./table-momento_consistencias";
 import { consistencias } from "./table-consistencias";
 import { con_var } from "./table-con_var";
 import { inconsistencias } from "./table-inconsistencias";
@@ -58,6 +59,7 @@ export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Bas
             super.prepareGetTables();
             this.getTableDefinition={
                 ...this.getTableDefinition,
+                momentos_consistencia,
                 consistencias,
                 con_var,
                 inconsistencias,
