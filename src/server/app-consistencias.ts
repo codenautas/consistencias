@@ -14,7 +14,7 @@ export * from "./types-consistencias";
 
 export var disableVarcal:boolean=false;
 
-interface ConsistenciasAppConfig extends AppConfig {
+export interface ConsistenciasAppConfig extends AppConfig {
     disableVarcal: boolean;
 }
 
