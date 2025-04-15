@@ -158,7 +158,7 @@ export class ConCompiler extends ExpressionProcessor{
                     `${con.getCompleteQuery(misConVars)} AND ${quoteIdent(<string>con.first_td)}.operativo=$1 ${mainTDCondition}`;
                 const inconsToInsertResult = await esto.client.query(selectForInsert ,[esto.operativo]).execute();
                 const enabledInconLimit = ConCompiler.enabledInconLimit || 2500;
-                if (inconsToInsertResult.rowCount > enabledInconLimit) {
+                if (inconsToInsertResult.rowCount ?? 0 > enabledInconLimit) {
                     throw new Error(`La consistencia ${con.consistencia} arrojará mas de ${enabledInconLimit} inconsistencias.`);
                 }
                 await esto.client.query(`INSERT INTO inconsistencias_ultimas(operativo, consistencia, pk_integrada, incon_valores) ${selectForInsert}` 

@@ -10,7 +10,7 @@ var procedures = [
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters<{ operativo: string }>){
             let compiler = new ConCompiler(context.client, params.operativo);
             await compiler.fetchDataFromDB();
             let cons = await Consistencia.fetchAll(context.client, params.operativo);
@@ -37,7 +37,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters<{ operativo: string; consistencia: string }>){
             //compilar y consistir dicha consistencia (correr para todas las encuestas)
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
@@ -57,7 +57,7 @@ var procedures = [
             {name:'operativo'  , typeName:'text', references:'operativos'},
             {name:'consistencia'        , typeName:'text', references:'consistencias'},
         ],
-        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters<{ operativo: string; consistencia: string }>){
             //compilar y consistir dicha consistencia (correr para todas las encuestas)
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
@@ -75,7 +75,7 @@ var procedures = [
     //     parameters:[
     //         {name:'operativo'  , typeName:'text', references:'operativos'}
     //     ],
-    //     coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+    //     coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters<{ operativo: string}>){
     //         try{
     //             let compiler = new ConCompiler(context.client, params.operativo);
     //             await compiler.fetchDataFromDB();
@@ -93,7 +93,7 @@ var procedures = [
             {name:'operativo', typeName:'text'},
             {name:'id_caso'  , typeName:'text'}
         ],
-        coreFunction:async function(context:ProcedureContext, parameters:CoreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, parameters:CoreFunctionParameters<{ operativo: string; id_caso: string }>){
             // consistir_encuesta := correr todas las consistencias para dicha encuesta
             try{
                 let compiler = new ConCompiler(context.client, parameters.operativo);
@@ -110,7 +110,7 @@ var procedures = [
         parameters:[
             {name:'operativo'  , typeName:'text', references:'operativos'}
         ],
-        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters){
+        coreFunction:async function(context:ProcedureContext, params: CoreFunctionParameters<{ operativo: string}>){
             try{
                 let compiler = new ConCompiler(context.client, params.operativo);
                 await compiler.fetchDataFromDB();

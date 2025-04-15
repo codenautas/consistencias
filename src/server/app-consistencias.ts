@@ -1,6 +1,6 @@
 "use strict";
 
-import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request, OptsClientPage } from "varcal";
+import { AppBackend, AppVarCalType, emergeAppOperativos, emergeAppVarCal, Constructor, MenuDefinition, MenuInfo, Request, OptsClientPage, AppConfig } from "varcal";
 import { procedures } from "./procedures-consistencias";
 import { momentos_consistencia } from "./table-momentos_consistencia";
 import { consistencias } from "./table-consistencias";
@@ -12,11 +12,17 @@ import {defConfig} from "./def-config";
 
 export * from "./types-consistencias";
 
-export var disableVarcal=undefined;
+export var disableVarcal:boolean=false;
+
+interface ConsistenciasAppConfig extends AppConfig {
+    disableVarcal: boolean;
+}
 
 export function emergeAppConsistencias<T extends Constructor<AppVarCalType>>(Base:T){
     
     return class AppConsistencias extends Base{
+        declare config: ConsistenciasAppConfig;
+
         constructor(...args:any[]){ 
             super(args);
         }
