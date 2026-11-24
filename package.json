@@ -1,7 +1,7 @@
 {
   "name": "consistencias",
   "description": "Capa de aplicación backend-plus para manejo de consistencias en operativos censales",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": [
     "Raquel N Salva <raquelzssalva@gmail.com>",
