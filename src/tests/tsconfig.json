@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "outDir": "../../compile-for-test",
+        "module": "commonjs",
+        "target": "es2019",
+        "lib":["es2019"]
+    },
+    "include":[
+        "."
+    ], 
+    "extends": "../tsconfig-common.json"
+}
